@@ -1,2 +1,2 @@
-elasticsearch-dataformat
+Elasticsearch Data Format Plugin
 ========================
