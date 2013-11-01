@@ -6,11 +6,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 import jp.sf.orangesignal.csv.CsvConfig;
 import jp.sf.orangesignal.csv.CsvWriter;
@@ -23,6 +24,7 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
+import org.seasar.util.lang.StringUtil;
 
 public class CsvContent extends DataContent {
     public CsvContent(final Client client, final RestRequest request,
@@ -53,18 +55,34 @@ public class CsvContent extends DataContent {
             csvWriter = new CsvWriter(new BufferedWriter(
                     new OutputStreamWriter(new FileOutputStream(outputFile),
                             charsetName)), cfg);
+
+            final String[] fields = request.paramAsStringArray("fl",
+                    StringUtil.EMPTY_STRINGS);
+            final Set<String> headerSet;
+            final boolean modifiableFieldSet;
+            if (fields.length == 0) {
+                headerSet = new LinkedHashSet<String>();
+                modifiableFieldSet = true;
+            } else {
+                final Set<String> fieldSet = new LinkedHashSet<String>();
+                for (final String field : fields) {
+                    fieldSet.add(field);
+                }
+                headerSet = Collections.unmodifiableSet(fieldSet);
+                modifiableFieldSet = false;
+            }
+
             while (true) {
                 scrollResp = client
                         .prepareSearchScroll(scrollResp.getScrollId())
                         .setScroll(keepAlive).execute().actionGet();
 
-                final Set<String> headerSet = new TreeSet<String>();
                 for (final SearchHit hit : scrollResp.getHits()) {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
                     final Map<String, Object> dataMap = new HashMap<String, Object>();
                     MapUtil.convertToFlatMap("", sourceMap, dataMap);
                     for (final String key : dataMap.keySet()) {
-                        if (!headerSet.contains(key)) {
+                        if (modifiableFieldSet && !headerSet.contains(key)) {
                             headerSet.add(key);
                         }
                     }

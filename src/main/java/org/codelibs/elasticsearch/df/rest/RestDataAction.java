@@ -51,21 +51,19 @@ import org.seasar.util.beans.factory.BeanDescFactory;
 import org.seasar.util.io.CloseableUtil;
 import org.seasar.util.lang.FieldUtil;
 
-public class RestDataScrollAction extends BaseRestHandler {
+public class RestDataAction extends BaseRestHandler {
 
     @Inject
-    public RestDataScrollAction(final Settings settings, final Client client,
+    public RestDataAction(final Settings settings, final Client client,
             final RestController restController) {
         super(settings, client);
 
-        restController.registerHandler(GET, "/_data/scroll", this);
-        restController.registerHandler(POST, "/_data/scroll", this);
-        restController.registerHandler(GET, "/{index}/_data/scroll", this);
-        restController.registerHandler(POST, "/{index}/_data/scroll", this);
-        restController.registerHandler(GET, "/{index}/{type}/_data/scroll",
-                this);
-        restController.registerHandler(POST, "/{index}/{type}/_data/scroll",
-                this);
+        restController.registerHandler(GET, "/_data", this);
+        restController.registerHandler(POST, "/_data", this);
+        restController.registerHandler(GET, "/{index}/_data", this);
+        restController.registerHandler(POST, "/{index}/_data", this);
+        restController.registerHandler(GET, "/{index}/{type}/_data", this);
+        restController.registerHandler(POST, "/{index}/{type}/_data", this);
     }
 
     @Override

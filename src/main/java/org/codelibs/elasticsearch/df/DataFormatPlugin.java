@@ -1,6 +1,6 @@
 package org.codelibs.elasticsearch.df;
 
-import org.codelibs.elasticsearch.df.rest.RestDataScrollAction;
+import org.codelibs.elasticsearch.df.rest.RestDataAction;
 import org.elasticsearch.plugins.AbstractPlugin;
 import org.elasticsearch.rest.RestModule;
 
@@ -17,7 +17,7 @@ public class DataFormatPlugin extends AbstractPlugin {
 
     // for Rest API
     public void onModule(final RestModule module) {
-        module.addRestAction(RestDataScrollAction.class);
+        module.addRestAction(RestDataAction.class);
     }
 
 }
