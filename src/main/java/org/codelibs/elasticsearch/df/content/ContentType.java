@@ -1,9 +1,8 @@
 package org.codelibs.elasticsearch.df.content;
 
 import org.codelibs.elasticsearch.df.content.csv.CsvContent;
-import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 
 public enum ContentType {
@@ -15,9 +14,8 @@ public enum ContentType {
 
         @Override
         public DataContent dataContent(final Client client,
-                final RestRequest request, final SearchResponse response,
-                final TimeValue keepAlive) {
-            return new CsvContent(client, request, response, keepAlive);
+                final RestRequest request, final RestChannel channel) {
+            return new CsvContent(client, request, channel);
         }
 
         @Override
@@ -49,5 +47,5 @@ public enum ContentType {
     public abstract String fileName(RestRequest request);
 
     public abstract DataContent dataContent(Client client, RestRequest request,
-            SearchResponse response, TimeValue keepAlive);
+            RestChannel channel);
 }
