@@ -1,6 +1,7 @@
 package org.codelibs.elasticsearch.df.content;
 
 import org.codelibs.elasticsearch.df.content.csv.CsvContent;
+import org.codelibs.elasticsearch.df.content.xls.XlsContent;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
@@ -29,6 +30,31 @@ public enum ContentType {
                 return index + ".csv";
             }
             return index + "_" + type + ".csv";
+        }
+    },
+    EXCEL(20) {
+        @Override
+        public String contentType() {
+            return "application/vnd.ms-excel";
+        }
+
+        @Override
+        public DataContent dataContent(final Client client,
+                final RestRequest request, final RestChannel channel) {
+            return new XlsContent(client, request, channel);
+        }
+
+        @Override
+        public String fileName(final RestRequest request) {
+            final String index = request.param("index");
+            if (index == null) {
+                return "_all.xls";
+            }
+            final String type = request.param("type");
+            if (type == null) {
+                return index + ".xls";
+            }
+            return index + "_" + type + ".xls";
         }
     };
 
