@@ -108,11 +108,6 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.seasar.util</groupId>
-			<artifactId>s2util</artifactId>
-			<version>0.0.1</version>
-		</dependency>
-		<dependency>
 			<groupId>jp.sf.orangesignal</groupId>
 			<artifactId>orangesignal-csv</artifactId>
 			<version>1.3.1</version>

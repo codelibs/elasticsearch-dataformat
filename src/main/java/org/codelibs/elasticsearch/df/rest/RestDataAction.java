@@ -15,7 +15,8 @@ import java.nio.channels.FileChannel;
 import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
-import org.codelibs.elasticsearch.df.util.NettyUtil;
+import org.codelibs.elasticsearch.df.util.IOUtils;
+import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.elasticsearch.ElasticSearchIllegalArgumentException;
 import org.elasticsearch.action.ActionListener;
@@ -49,7 +50,6 @@ import org.elasticsearch.rest.XContentRestResponse;
 import org.elasticsearch.rest.XContentThrowableRestResponse;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
-import org.seasar.util.io.CloseableUtil;
 
 public class RestDataAction extends BaseRestHandler {
 
@@ -165,14 +165,12 @@ public class RestDataAction extends BaseRestHandler {
         if (channel instanceof NettyHttpChannel) {
             final DefaultHttpResponse nettyResponse = new DefaultHttpResponse(
                     HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-
-            nettyResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE,
+            HttpHeaders headers = nettyResponse.headers();
+            headers.set(HttpHeaders.Names.CONTENT_TYPE,
                     contentType.contentType());
-            nettyResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH,
-                    outputFile.length());
-            nettyResponse.setHeader("Content-Disposition",
-                    "attachment; filename=\"" + contentType.fileName(request)
-                            + "\"");
+            headers.set(HttpHeaders.Names.CONTENT_LENGTH, outputFile.length());
+            headers.set("Content-Disposition", "attachment; filename=\""
+                    + contentType.fileName(request) + "\"");
 
             FileInputStream fis = null;
             FileChannel fileChannel = null;
@@ -186,7 +184,7 @@ public class RestDataAction extends BaseRestHandler {
                         .wrappedBuffer(buffer);
                 nettyResponse.setContent(channelBuffer);
 
-                final Channel nettyChannel = NettyUtil.getChannel(channel);
+                final Channel nettyChannel = NettyUtils.getChannel(channel);
                 nettyChannel.write(nettyResponse);
             } catch (final Exception e) {
                 throw new DfContentException("Failed to render the content.", e);
@@ -198,7 +196,7 @@ public class RestDataAction extends BaseRestHandler {
                         // ignore
                     }
                 }
-                CloseableUtil.close(fis);
+                IOUtils.closeQuietly(fis);
             }
         } else {
             throw new DfContentException("The channel is not NettyHttpChannel.");
@@ -371,7 +369,9 @@ public class RestDataAction extends BaseRestHandler {
 
     class SearchResponseListener implements ActionListener<SearchResponse> {
         private final RestRequest request;
+
         private final RestChannel channel;
+
         private File outputFile;
 
         SearchResponseListener(final RestRequest request,

@@ -27,8 +27,9 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtil;
-import org.codelibs.elasticsearch.df.util.NettyUtil;
+import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
+import org.codelibs.elasticsearch.df.util.StringUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
@@ -39,8 +40,7 @@ import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.seasar.util.lang.StringUtil;
-
+ 
 public class XlsContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(XlsContent.class);
     private final String charsetName;
@@ -71,7 +71,7 @@ public class XlsContent extends DataContent {
         charsetName = request.param("csv.encoding", "UTF-8");
 
         final String[] fields = request.paramAsStringArray("fl",
-                StringUtil.EMPTY_STRINGS);
+                StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
             modifiableFieldSet = true;
@@ -84,7 +84,7 @@ public class XlsContent extends DataContent {
             modifiableFieldSet = false;
         }
 
-        nettyChannel = NettyUtil.getChannel(channel);
+        nettyChannel = NettyUtils.getChannel(channel);
 
         if (logger.isDebugEnabled()) {
             logger.debug("CsvConfig: " + csvConfig + ", appnedHeader: "
