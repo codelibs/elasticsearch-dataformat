@@ -14,8 +14,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import jp.sf.orangesignal.csv.CsvWriter;
-
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -53,7 +51,7 @@ public class XlsContent extends DataContent {
             final RestChannel channel) {
         super(client, request);
 
-        appnedHeader = request.paramAsBoolean("csv.header", true);
+        appnedHeader = request.paramAsBoolean("append.header", true);
         final String[] fields = request.paramAsStringArray("fl",
                 StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
@@ -93,8 +91,6 @@ public class XlsContent extends DataContent {
     protected class OnLoadListener implements ActionListener<SearchResponse> {
         protected ActionListener<Void> listener;
 
-        protected CsvWriter csvWriter;
-
         protected File outputFile;
 
         private int currentCount = 0;
@@ -113,6 +109,7 @@ public class XlsContent extends DataContent {
             }
 
             Workbook workbook;
+            Sheet sheet;
             try {
                 if (outputFile.exists()) {
                     InputStream stream = null;
@@ -124,15 +121,16 @@ public class XlsContent extends DataContent {
                         if (stream != null) {
                             try {
                                 stream.close();
-                            } catch (IOException e) {
+                            } catch (final IOException e) {
                                 // ignore
                             }
                         }
                     }
+                    sheet = workbook.getSheetAt(0);
                 } else {
                     workbook = new HSSFWorkbook();
+                    sheet = workbook.createSheet();
                 }
-                Sheet sheet = workbook.createSheet();
 
                 final SearchHits hits = response.getHits();
 
@@ -151,10 +149,10 @@ public class XlsContent extends DataContent {
                         }
                     }
                     if (appnedHeader) {
-                        Row headerRow = sheet.createRow(1);
+                        final Row headerRow = sheet.createRow(currentCount);
                         int count = 0;
-                        for (String value : headerSet) {
-                            Cell cell = headerRow.createCell(count);
+                        for (final String value : headerSet) {
+                            final Cell cell = headerRow.createCell(count);
                             cell.setCellValue(value);
                             count++;
                         }
@@ -162,14 +160,15 @@ public class XlsContent extends DataContent {
                     }
 
                     currentCount++;
-                    Row row = sheet.createRow(appnedHeader ? currentCount + 1
-                            : currentCount);
+                    final Row row = sheet
+                            .createRow(appnedHeader ? currentCount + 1
+                                    : currentCount);
 
                     int count = 0;
                     for (final String name : headerSet) {
                         final Object value = dataMap.get(name);
                         if (value != null) {
-                            Cell cell = row.createCell(count);
+                            final Cell cell = row.createCell(count);
                             cell.setCellValue(value.toString());
                             count++;
                         }
@@ -186,7 +185,7 @@ public class XlsContent extends DataContent {
                     if (stream != null) {
                         try {
                             stream.close();
-                        } catch (IOException e) {
+                        } catch (final IOException e) {
                             // ignore
                         }
                     }
@@ -210,24 +209,9 @@ public class XlsContent extends DataContent {
 
         @Override
         public void onFailure(final Throwable e) {
-            try {
-                close();
-            } catch (final Exception e1) {
-                // ignore
-            }
             listener.onFailure(new DfContentException("Failed to write data.",
                     e));
         }
 
-        private void close() {
-            if (csvWriter != null) {
-                try {
-                    csvWriter.close();
-                } catch (final IOException e) {
-                    throw new DfContentException("Could not close "
-                            + outputFile.getAbsolutePath(), e);
-                }
-            }
-        }
     }
 }

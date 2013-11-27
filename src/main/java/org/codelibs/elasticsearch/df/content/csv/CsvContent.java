@@ -35,11 +35,17 @@ import org.elasticsearch.search.SearchHits;
 
 public class CsvContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(CsvContent.class);
+
     private final String charsetName;
+
     private final CsvConfig csvConfig;
+
     private boolean appnedHeader;
+
     private Set<String> headerSet;
+
     private boolean modifiableFieldSet;
+
     private final Channel nettyChannel;
 
     public CsvContent(final Client client, final RestRequest request,
@@ -59,7 +65,7 @@ public class CsvContent extends DataContent {
         csvConfig.setIgnoreTrailingWhitespaces(request.paramAsBoolean(
                 "csv.ignoreTrailingWhitespaces", true));
 
-        appnedHeader = request.paramAsBoolean("csv.header", true);
+        appnedHeader = request.paramAsBoolean("append.header", true);
         charsetName = request.param("csv.encoding", "UTF-8");
 
         final String[] fields = request.paramAsStringArray("fl",
@@ -103,6 +109,7 @@ public class CsvContent extends DataContent {
         protected ActionListener<Void> listener;
 
         protected CsvWriter csvWriter;
+
         protected File outputFile;
 
         private long currentCount = 0;

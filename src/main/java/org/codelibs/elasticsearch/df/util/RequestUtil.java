@@ -9,7 +9,7 @@ public class RequestUtil {
     private RequestUtil() {
     }
 
-    public static TimeValue getScroll(RestRequest request) {
+    public static TimeValue getScroll(final RestRequest request) {
         final String scroll = request.param("scroll");
         if (scroll != null) {
             return parseTimeValue(scroll, null);
