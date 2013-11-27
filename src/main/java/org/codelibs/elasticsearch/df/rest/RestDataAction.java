@@ -154,6 +154,13 @@ public class RestDataAction extends BaseRestHandler {
                 || "text/comma-separated-values".equals(contentType)
                 || "csv".equalsIgnoreCase(contentType)) {
             return ContentType.CSV;
+        } else if ("application/excel".equals(contentType)
+                || "application/msexcel".equals(contentType)
+                || "application/vnd.ms-excel".equals(contentType)
+                || "application/x-excel".equals(contentType)
+                || "application/x-msexcel".equals(contentType)
+                || "xls".equalsIgnoreCase(contentType)) {
+            return ContentType.EXCEL;
         }
 
         return null;
@@ -165,12 +172,13 @@ public class RestDataAction extends BaseRestHandler {
         if (channel instanceof NettyHttpChannel) {
             final DefaultHttpResponse nettyResponse = new DefaultHttpResponse(
                     HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            HttpHeaders headers = nettyResponse.headers();
-            headers.set(HttpHeaders.Names.CONTENT_TYPE,
+            nettyResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE,
                     contentType.contentType());
-            headers.set(HttpHeaders.Names.CONTENT_LENGTH, outputFile.length());
-            headers.set("Content-Disposition", "attachment; filename=\""
-                    + contentType.fileName(request) + "\"");
+            nettyResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH,
+                    outputFile.length());
+            nettyResponse.setHeader("Content-Disposition",
+                    "attachment; filename=\"" + contentType.fileName(request)
+                            + "\"");
 
             FileInputStream fis = null;
             FileChannel fileChannel = null;
@@ -404,32 +412,37 @@ public class RestDataAction extends BaseRestHandler {
 
             try {
                 outputFile = File.createTempFile("es_df_output_", ".dat");
-                if (logger.isDebugEnabled()) {
-                    logger.debug("outputFile: " + outputFile.getAbsolutePath());
-                }
-                final DataContent dataContent = contentType.dataContent(client,
-                        request, channel);
-                dataContent.write(outputFile, response,
-                        new ActionListener<Void>() {
+                if (outputFile.delete()) {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("outputFile: "
+                                + outputFile.getAbsolutePath());
+                    }
+                    final DataContent dataContent = contentType.dataContent(
+                            client, request, channel);
+                    dataContent.write(outputFile, response,
+                            new ActionListener<Void>() {
 
-                            @Override
-                            public void onResponse(final Void response) {
-                                try {
-                                    writeResponse(request, channel,
-                                            contentType, outputFile);
-                                    SearchResponseListener.this
-                                            .deleteOutputFile();
-                                } catch (final Exception e) {
-                                    onFailure(e);
+                                @Override
+                                public void onResponse(final Void response) {
+                                    try {
+                                        writeResponse(request, channel,
+                                                contentType, outputFile);
+                                        SearchResponseListener.this
+                                                .deleteOutputFile();
+                                    } catch (final Exception e) {
+                                        onFailure(e);
+                                    }
                                 }
-                            }
 
-                            @Override
-                            public void onFailure(final Throwable e) {
-                                SearchResponseListener.this.onFailure(e);
-                            }
-                        });
-
+                                @Override
+                                public void onFailure(final Throwable e) {
+                                    SearchResponseListener.this.onFailure(e);
+                                }
+                            });
+                } else {
+                    onFailure(new DfContentException(
+                            "Could not create a temporary file on the local system."));
+                }
             } catch (final IOException e) {
                 onFailure(e);
             }

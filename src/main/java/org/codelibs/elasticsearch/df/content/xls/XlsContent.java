@@ -2,21 +2,18 @@ package org.codelibs.elasticsearch.df.content.xls;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import jp.sf.orangesignal.csv.CsvConfig;
 import jp.sf.orangesignal.csv.CsvWriter;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -40,36 +37,23 @@ import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
- 
+
 public class XlsContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(XlsContent.class);
-    private final String charsetName;
-    private final CsvConfig csvConfig;
+
     private boolean appnedHeader;
+
     private Set<String> headerSet;
+
     private boolean modifiableFieldSet;
+
     private final Channel nettyChannel;
 
     public XlsContent(final Client client, final RestRequest request,
             final RestChannel channel) {
         super(client, request);
-        csvConfig = new CsvConfig(
-                request.param("csv.separator", ",").charAt(0), request.param(
-                        "csv.quote", "\"").charAt(0), request.param(
-                        "csv.escape", "\"").charAt(0));
-        csvConfig.setQuoteDisabled(request.paramAsBoolean("csv.quoteDisabled",
-                false));
-        csvConfig.setEscapeDisabled(request.paramAsBoolean(
-                "csv.escapeDisabled", false));
-        csvConfig.setNullString(request.param("csv.nullString", ""));
-        csvConfig.setIgnoreLeadingWhitespaces(request.paramAsBoolean(
-                "csv.ignoreLeadingWhitespaces", true));
-        csvConfig.setIgnoreTrailingWhitespaces(request.paramAsBoolean(
-                "csv.ignoreTrailingWhitespaces", true));
 
         appnedHeader = request.paramAsBoolean("csv.header", true);
-        charsetName = request.param("csv.encoding", "UTF-8");
-
         final String[] fields = request.paramAsStringArray("fl",
                 StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
@@ -87,10 +71,8 @@ public class XlsContent extends DataContent {
         nettyChannel = NettyUtils.getChannel(channel);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("CsvConfig: " + csvConfig + ", appnedHeader: "
-                    + appnedHeader + ", charsetName: " + charsetName
-                    + ", headerSet: " + headerSet + ", nettyChannel: "
-                    + nettyChannel);
+            logger.debug("appnedHeader: " + appnedHeader + ", headerSet: "
+                    + headerSet + ", nettyChannel: " + nettyChannel);
         }
     }
 
@@ -112,6 +94,7 @@ public class XlsContent extends DataContent {
         protected ActionListener<Void> listener;
 
         protected CsvWriter csvWriter;
+
         protected File outputFile;
 
         private int currentCount = 0;
@@ -120,15 +103,6 @@ public class XlsContent extends DataContent {
                 final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
-            try {
-                csvWriter = new CsvWriter(
-                        new BufferedWriter(new OutputStreamWriter(
-                                new FileOutputStream(outputFile), charsetName)),
-                        csvConfig);
-            } catch (final Exception e) {
-                throw new DfContentException("Could not open "
-                        + outputFile.getAbsolutePath(), e);
-            }
         }
 
         @Override
@@ -140,7 +114,7 @@ public class XlsContent extends DataContent {
 
             Workbook workbook;
             try {
-                if (outputFile.isFile()) {
+                if (outputFile.exists()) {
                     InputStream stream = null;
                     try {
                         stream = new BufferedInputStream(new FileInputStream(
