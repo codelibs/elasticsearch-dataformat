@@ -3,23 +3,34 @@ Elasticsearch Data Format Plugin
 
 ## Overview
 
-Elasticsearch supports JSON/SMILE/YAML formats as a response of a search result.
-This plugin adds other formats, such as CSV.
+Elasticsearch supports JSON/SMILE/YAML formats as the response of a search result.
+This plugin adds supports for other formats, such as CSV and Excel.
+
+## Version
+
+| River Web | elasticsearch |
+|:---------:|:-------------:|
+| master    | 1.0.0.X       |
+| 0.1.0     | 0.90.7        |
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin -install dataformat --url https://.../elasticsearch-dataformat...zip (see below)
-
-ZIP file for Data Format plugin is in [HERE](https://oss.sonatype.org/content/repositories/snapshots/org/codelibs/elasticsearch-dataformat/).
+    $ $ES_HOME/bin/plugin -install org.codelibs/elasticsearch-dataformat/0.1.0
 
 ## Supported Output Formats
 
+This plugin allows you to download data as a format you want.
+Parameters for a query are the same as a scan query.
+
 ### CSV
 
-This plugin allows you to download data as CSV file.
+    $ curl -o /tmp/data.csv -XGET "localhost:9200/_data?format=csv"
 
-    $ curl -o /tmp/test.csv -XGET "localhost:9200/_data?format=csv"
+### Excel
 
-### Others
+    $ curl -o /tmp/data.xls -XGET "localhost:9200/_data?format=excel"
 
-TBD...
+### JSON (Elasticsearch Bulk format)
+
+    $ curl -o /tmp/data.json -XGET "localhost:9200/_data?format=json"
+
