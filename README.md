@@ -25,7 +25,7 @@ Parameters for a query are the same as a scan query.
 
 ### CSV
 
-    $ curl -o /tmp/data.csv -XGET "localhost:9200/_data?format=csv&source=..."
+    $ curl -o /tmp/data.csv -XGET "localhost:9200/{index}/{type}/_data?format=csv&source=..."
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
@@ -40,7 +40,7 @@ Parameters for a query are the same as a scan query.
 
 ### Excel
 
-    $ curl -o /tmp/data.xls -XGET "localhost:9200/_data?format=xls&source=..."
+    $ curl -o /tmp/data.xls -XGET "localhost:9200/{index}/{type}/_data?format=xls&source=..."
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
@@ -48,7 +48,7 @@ Parameters for a query are the same as a scan query.
 
 ### JSON (Elasticsearch Bulk format)
 
-    $ curl -o /tmp/data.json -XGET "localhost:9200/_data?format=json&source=..."
+    $ curl -o /tmp/data.json -XGET "localhost:9200/{index}/{type}/_data?format=json&source=..."
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
