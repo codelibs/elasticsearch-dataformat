@@ -18,12 +18,12 @@ import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.codelibs.elasticsearch.util.IOUtils;
 import org.codelibs.elasticsearch.util.NettyUtils;
-import org.elasticsearch.ElasticSearchIllegalArgumentException;
+import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchOperationThreading;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.support.IgnoreIndices;
+import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
@@ -113,10 +113,7 @@ public class RestDataAction extends BaseRestHandler {
             }
             prepareSearch.setRouting(request.param("routing"));
             prepareSearch.setPreference(request.param("preference"));
-            if (request.hasParam("ignore_indices")) {
-                prepareSearch.setIgnoreIndices(IgnoreIndices.fromString(request
-                        .param("ignore_indices")));
-            }
+            prepareSearch.setIndicesOptions(IndicesOptions.fromRequest(request, IndicesOptions.strict()));
 
             prepareSearch.setListenerThreaded(false);
             SearchOperationThreading operationThreading = SearchOperationThreading
@@ -239,7 +236,7 @@ public class RestDataAction extends BaseRestHandler {
                     queryBuilder
                             .defaultOperator(QueryStringQueryBuilder.Operator.AND);
                 } else {
-                    throw new ElasticSearchIllegalArgumentException(
+                    throw new ElasticsearchIllegalArgumentException(
                             "Unsupported defaultOperator [" + defaultOperator
                                     + "], can either be [OR] or [AND]");
                 }
@@ -336,7 +333,7 @@ public class RestDataAction extends BaseRestHandler {
             for (final String indexBoost : indicesBoost) {
                 final int divisor = indexBoost.indexOf(',');
                 if (divisor == -1) {
-                    throw new ElasticSearchIllegalArgumentException(
+                    throw new ElasticsearchIllegalArgumentException(
                             "Illegal index boost [" + indexBoost + "], no ','");
                 }
                 final String indexName = indexBoost.substring(0, divisor);
@@ -345,7 +342,7 @@ public class RestDataAction extends BaseRestHandler {
                     searchSourceBuilder.indexBoost(indexName,
                             Float.parseFloat(sBoost));
                 } catch (final NumberFormatException e) {
-                    throw new ElasticSearchIllegalArgumentException(
+                    throw new ElasticsearchIllegalArgumentException(
                             "Illegal index boost [" + indexBoost
                                     + "], boost not a float number");
                 }
