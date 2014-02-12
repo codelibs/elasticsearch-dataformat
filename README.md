@@ -29,14 +29,14 @@ Parameters for a query are the same as a scan query.
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
-| fl                | string  |             |
-| source            | string  |             |
-| csv.separator     | string  |             |
-| csv.quote         | string  |             |
-| csv.escape        | string  |             |
-| csv.nullString    | string  |             |
-| append.header     | boolean |             |
-| csv.encoding      | string  |             |
+| fl                | string  | Field names you want to contain in CSV |
+| source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
+| csv.separator     | string  | Separate character in CSV |
+| csv.quote         | string  | Quote character in CSV|
+| csv.escape        | string  | Escape character in CSV |
+| csv.nullString    | string  | String if a value is null |
+| append.header     | boolean | Append column headers if true |
+| csv.encoding      | string  | Encoding for CSV |
 
 ### Excel
 
@@ -44,7 +44,7 @@ Parameters for a query are the same as a scan query.
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
-| source            | string  |             |
+| source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
 
 ### JSON (Elasticsearch Bulk format)
 
@@ -52,4 +52,5 @@ Parameters for a query are the same as a scan query.
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
-| source            | string  |             |
+| source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
+
