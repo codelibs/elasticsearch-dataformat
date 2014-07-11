@@ -14,6 +14,11 @@ The supported formats are CSV, Excel and JSON(Bulk).
 | 0.2.0     | 1.0.0.RC2     |
 | 0.1.0     | 0.90.7        |
 
+### Issues/Questions
+
+Please file an [issue](https://github.com/codelibs/elasticsearch-dataformat/issues "issue").
+(Japanese forum is [here](https://github.com/codelibs/codelibs-ja-forum "here").)
+
 ## Installation
 
     $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/0.2.0
