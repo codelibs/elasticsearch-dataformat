@@ -143,6 +143,7 @@ public class XlsContent extends DataContent {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
                     final Map<String, Object> dataMap = new HashMap<String, Object>();
                     MapUtil.convertToFlatMap("", sourceMap, dataMap);
+                    
                     for (final String key : dataMap.keySet()) {
                         if (modifiableFieldSet && !headerSet.contains(key)) {
                             headerSet.add(key);
@@ -166,7 +167,10 @@ public class XlsContent extends DataContent {
 
                     int count = 0;
                     for (final String name : headerSet) {
-                        final Object value = dataMap.get(name);
+                        Object value = dataMap.get(name);
+                        if (value == null) {
+                        	value = (Object)"-";
+                        }
                         if (value != null) {
                             final Cell cell = row.createCell(count);
                             cell.setCellValue(value.toString());
