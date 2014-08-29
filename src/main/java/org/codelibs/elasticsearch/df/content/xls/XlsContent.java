@@ -23,8 +23,8 @@ import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtil;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
-import org.codelibs.elasticsearch.util.NettyUtils;
-import org.codelibs.elasticsearch.util.StringUtils;
+import org.codelibs.elasticsearch.util.lang.StringUtils;
+import org.codelibs.elasticsearch.util.netty.NettyUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
@@ -38,6 +38,8 @@ import org.elasticsearch.search.SearchHits;
 
 public class XlsContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(XlsContent.class);
+
+    private static final String DEFAULT_HEADER_COLUMN = "-";
 
     private boolean appnedHeader;
 
@@ -89,6 +91,7 @@ public class XlsContent extends DataContent {
     }
 
     protected class OnLoadListener implements ActionListener<SearchResponse> {
+
         protected ActionListener<Void> listener;
 
         protected File outputFile;
@@ -143,7 +146,7 @@ public class XlsContent extends DataContent {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
                     final Map<String, Object> dataMap = new HashMap<String, Object>();
                     MapUtil.convertToFlatMap("", sourceMap, dataMap);
-                    
+
                     for (final String key : dataMap.keySet()) {
                         if (modifiableFieldSet && !headerSet.contains(key)) {
                             headerSet.add(key);
@@ -168,14 +171,14 @@ public class XlsContent extends DataContent {
                     int count = 0;
                     for (final String name : headerSet) {
                         Object value = dataMap.get(name);
-                        if (value == null) {
-                        	value = (Object)"-";
-                        }
-                        if (value != null) {
-                            final Cell cell = row.createCell(count);
+                        final Cell cell = row.createCell(count);
+                        if (value != null
+                                && value.toString().trim().length() > 0) {
                             cell.setCellValue(value.toString());
-                            count++;
+                        } else {
+                            cell.setCellValue(DEFAULT_HEADER_COLUMN);
                         }
+                        count++;
                     }
                 }
 

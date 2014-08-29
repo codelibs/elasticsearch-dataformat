@@ -2,7 +2,6 @@ package org.codelibs.elasticsearch.df.rest;
 
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
-import static org.elasticsearch.rest.RestStatus.BAD_REQUEST;
 import static org.elasticsearch.search.suggest.SuggestBuilder.termSuggestion;
 
 import java.io.File;
@@ -15,8 +14,8 @@ import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
-import org.codelibs.elasticsearch.util.IOUtils;
-import org.codelibs.elasticsearch.util.NettyUtils;
+import org.codelibs.elasticsearch.util.io.IOUtils;
+import org.codelibs.elasticsearch.util.netty.NettyUtils;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchRequestBuilder;
