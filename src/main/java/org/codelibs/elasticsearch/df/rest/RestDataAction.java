@@ -3,7 +3,6 @@ package org.codelibs.elasticsearch.df.rest;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestStatus.BAD_REQUEST;
-import static org.elasticsearch.rest.action.support.RestXContentBuilder.restContentBuilder;
 import static org.elasticsearch.search.suggest.SuggestBuilder.termSuggestion;
 
 import java.io.File;
@@ -20,7 +19,6 @@ import org.codelibs.elasticsearch.util.IOUtils;
 import org.codelibs.elasticsearch.util.NettyUtils;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.search.SearchOperationThreading;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.IndicesOptions;
@@ -43,11 +41,11 @@ import org.elasticsearch.http.netty.NettyHttpChannel;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.QueryStringQueryBuilder;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
-import org.elasticsearch.rest.XContentRestResponse;
-import org.elasticsearch.rest.XContentThrowableRestResponse;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 
@@ -116,25 +114,16 @@ public class RestDataAction extends BaseRestHandler {
             prepareSearch.setIndicesOptions(IndicesOptions.fromRequest(request, IndicesOptions.strict()));
 
             prepareSearch.setListenerThreaded(false);
-            SearchOperationThreading operationThreading = SearchOperationThreading
-                    .fromString(request.param("operation_threading"), null);
-            if (operationThreading != null) {
-                if (operationThreading == SearchOperationThreading.NO_THREADS) {
-                    // since we don't spawn, don't allow no_threads, but change
-                    // it to a single thread
-                    operationThreading = SearchOperationThreading.SINGLE_THREAD;
-                }
-                prepareSearch.setOperationThreading(operationThreading);
-            }
-
             prepareSearch.execute(new SearchResponseListener(request, channel));
         } catch (final Exception e) {
             logger.error("failed to parse search request parameters", e);
             try {
-                final XContentBuilder builder = restContentBuilder(request);
-                channel.sendResponse(new XContentRestResponse(request,
-                        BAD_REQUEST, builder.startObject()
-                                .field("error", e.getMessage()).endObject()));
+            	final XContentBuilder builder = channel.newBuilder();
+            	builder.startObject()
+            			.field("error", e.getMessage())
+            			.endObject();
+            	channel.sendResponse(new BytesRestResponse(RestStatus.BAD_REQUEST, builder));
+            	  
             } catch (final IOException e1) {
                 logger.error("Failed to send failure response", e1);
             }
@@ -395,16 +384,16 @@ public class RestDataAction extends BaseRestHandler {
             final ContentType contentType = getContentType(request);
             if (contentType == null) {
                 try {
-                    final XContentBuilder builder = restContentBuilder(request);
-                    channel.sendResponse(new XContentRestResponse(
-                            request,
-                            BAD_REQUEST,
-                            builder.startObject()
-                                    .field("error",
-                                            "Unknown content type: "
-                                                    + request
-                                                            .header(HttpHeaders.Names.CONTENT_TYPE))
-                                    .endObject()));
+                    final XContentBuilder builder = channel.newBuilder();
+                    builder.startObject()
+                    	.field("error",
+                    			"Unknown content type:"
+                    			+ request.header(HttpHeaders.Names.CONTENT_TYPE))
+                    	.endObject();
+                    channel.sendResponse(new BytesRestResponse(
+                    		RestStatus.BAD_REQUEST,
+                    		builder));
+                
                 } catch (final IOException e) {
                     logger.error("Failed to send failure response", e);
                 }
@@ -459,8 +448,7 @@ public class RestDataAction extends BaseRestHandler {
         public void onFailure(final Throwable e) {
             deleteOutputFile();
             try {
-                channel.sendResponse(new XContentThrowableRestResponse(request,
-                        e));
+                channel.sendResponse(new BytesRestResponse(channel, RestStatus.INTERNAL_SERVER_ERROR, e));
             } catch (final IOException e1) {
                 logger.error("Failed to send failure response", e1);
             }
