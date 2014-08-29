@@ -66,8 +66,8 @@ public class RestDataAction extends BaseRestHandler {
     }
 
     @Override
-    public void handleRequest(final RestRequest request,
-            final RestChannel channel) {
+    protected void handleRequest(final RestRequest request,
+            final RestChannel channel, final Client client) {
 
         SearchRequestBuilder prepareSearch;
         try {
@@ -110,19 +110,21 @@ public class RestDataAction extends BaseRestHandler {
             }
             prepareSearch.setRouting(request.param("routing"));
             prepareSearch.setPreference(request.param("preference"));
-            prepareSearch.setIndicesOptions(IndicesOptions.fromRequest(request, IndicesOptions.strict()));
+            prepareSearch.setIndicesOptions(IndicesOptions.fromRequest(request,
+                    IndicesOptions.strictExpandOpen()));
 
             prepareSearch.setListenerThreaded(false);
-            prepareSearch.execute(new SearchResponseListener(request, channel));
+            prepareSearch.execute(new SearchResponseListener(request, channel,
+                    client));
         } catch (final Exception e) {
             logger.error("failed to parse search request parameters", e);
             try {
-            	final XContentBuilder builder = channel.newBuilder();
-            	builder.startObject()
-            			.field("error", e.getMessage())
-            			.endObject();
-            	channel.sendResponse(new BytesRestResponse(RestStatus.BAD_REQUEST, builder));
-            	  
+                final XContentBuilder builder = channel.newBuilder();
+                builder.startObject().field("error", e.getMessage())
+                        .endObject();
+                channel.sendResponse(new BytesRestResponse(
+                        RestStatus.BAD_REQUEST, builder));
+
             } catch (final IOException e1) {
                 logger.error("Failed to send failure response", e1);
             }
@@ -213,8 +215,7 @@ public class RestDataAction extends BaseRestHandler {
                     "analyze_wildcard", false));
             queryBuilder.lowercaseExpandedTerms(request.paramAsBoolean(
                     "lowercase_expanded_terms", true));
-            queryBuilder.lenient(request
-                    .paramAsBooleanOptional("lenient", null));
+            queryBuilder.lenient(request.paramAsBoolean("lenient", null));
             final String defaultOperator = request.param("default_operator");
             if (defaultOperator != null) {
                 if ("OR".equals(defaultOperator)) {
@@ -254,15 +255,15 @@ public class RestDataAction extends BaseRestHandler {
             if (searchSourceBuilder == null) {
                 searchSourceBuilder = new SearchSourceBuilder();
             }
-            searchSourceBuilder.explain(request.paramAsBooleanOptional(
-                    "explain", null));
+            searchSourceBuilder
+                    .explain(request.paramAsBoolean("explain", null));
         }
         if (request.hasParam("version")) {
             if (searchSourceBuilder == null) {
                 searchSourceBuilder = new SearchSourceBuilder();
             }
-            searchSourceBuilder.version(request.paramAsBooleanOptional(
-                    "version", null));
+            searchSourceBuilder
+                    .version(request.paramAsBoolean("version", null));
         }
         if (request.hasParam("timeout")) {
             if (searchSourceBuilder == null) {
@@ -371,10 +372,13 @@ public class RestDataAction extends BaseRestHandler {
 
         private File outputFile;
 
+        private Client client;
+
         SearchResponseListener(final RestRequest request,
-                final RestChannel channel) {
+                final RestChannel channel, Client client) {
             this.request = request;
             this.channel = channel;
+            this.client = client;
         }
 
         @Override
@@ -385,14 +389,14 @@ public class RestDataAction extends BaseRestHandler {
                 try {
                     final XContentBuilder builder = channel.newBuilder();
                     builder.startObject()
-                    	.field("error",
-                    			"Unknown content type:"
-                    			+ request.header(HttpHeaders.Names.CONTENT_TYPE))
-                    	.endObject();
+                            .field("error",
+                                    "Unknown content type:"
+                                            + request
+                                                    .header(HttpHeaders.Names.CONTENT_TYPE))
+                            .endObject();
                     channel.sendResponse(new BytesRestResponse(
-                    		RestStatus.BAD_REQUEST,
-                    		builder));
-                
+                            RestStatus.BAD_REQUEST, builder));
+
                 } catch (final IOException e) {
                     logger.error("Failed to send failure response", e);
                 }
@@ -447,7 +451,8 @@ public class RestDataAction extends BaseRestHandler {
         public void onFailure(final Throwable e) {
             deleteOutputFile();
             try {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.INTERNAL_SERVER_ERROR, e));
+                channel.sendResponse(new BytesRestResponse(channel,
+                        RestStatus.INTERNAL_SERVER_ERROR, e));
             } catch (final IOException e1) {
                 logger.error("Failed to send failure response", e1);
             }
