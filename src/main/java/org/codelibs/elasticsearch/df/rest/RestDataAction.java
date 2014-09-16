@@ -169,6 +169,7 @@ public class RestDataAction extends BaseRestHandler {
             nettyResponse.setHeader("Content-Disposition",
                     "attachment; filename=\"" + contentType.fileName(request)
                             + "\"");
+            nettyResponse.setHeader(HttpHeaders.Names.COOKIE, "fileDownload=true; path=/");
 
             FileInputStream fis = null;
             FileChannel fileChannel = null;
