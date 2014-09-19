@@ -11,7 +11,8 @@ The supported formats are CSV, Excel and JSON(Bulk).
 | River Web | elasticsearch |
 |:---------:|:-------------:|
 | master    | 1.0.0.X       |
-| 0.2.0     | 1.0.0.RC2     |
+| 1.3.0     | 1.3.2         |
+| 1.2.0     | 1.2.4         |
 | 0.1.0     | 0.90.7        |
 
 ### Issues/Questions
@@ -21,7 +22,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-dataformat/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/0.2.0
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.3.0
 
 ## Supported Output Formats
 

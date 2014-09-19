@@ -22,8 +22,8 @@ import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtil;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
-import org.codelibs.elasticsearch.util.NettyUtils;
-import org.codelibs.elasticsearch.util.StringUtils;
+import org.codelibs.elasticsearch.util.lang.StringUtils;
+import org.codelibs.elasticsearch.util.netty.NettyUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
@@ -39,6 +39,8 @@ public class XlsContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(XlsContent.class);
     
     private static final int SXSSF_FLUSH_COUNT = 1000;
+
+    private static final String DEFAULT_HEADER_COLUMN = "-";
 
     private boolean appnedHeader;
 
@@ -183,14 +185,14 @@ public class XlsContent extends DataContent {
                     int count = 0;
                     for (final String name : headerSet) {
                         Object value = dataMap.get(name);
-                        if (value == null) {
-                        	value = (Object)"-";
-                        }
-                        if (value != null) {
-                            final Cell cell = row.createCell(count);
+                        final Cell cell = row.createCell(count);
+                        if (value != null
+                                && value.toString().trim().length() > 0) {
                             cell.setCellValue(value.toString());
-                            count++;
+                        } else {
+                            cell.setCellValue(DEFAULT_HEADER_COLUMN);
                         }
+                        count++;
                     }
                     
                     flushSheet(currentCount, sheet);
