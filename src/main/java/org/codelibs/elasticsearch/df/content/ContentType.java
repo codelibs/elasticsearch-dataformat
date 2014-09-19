@@ -21,8 +21,8 @@ public enum ContentType {
         }
 
         @Override
-        public String fileName(final RestRequest request) {
-            final String index = request.param("index");
+        public String fileName(final RestRequest request) {        	
+        	final String index = request.param("index");
             if (index == null) {
                 return "_all.csv";
             }
@@ -46,8 +46,8 @@ public enum ContentType {
         }
 
         @Override
-        public String fileName(final RestRequest request) {
-            final String index = request.param("index");
+        public String fileName(final RestRequest request) {     	
+        	final String index = request.param("index");
             if (index == null) {
                 return "_all.xls";
             }
@@ -71,8 +71,8 @@ public enum ContentType {
         }
 
         @Override
-        public String fileName(final RestRequest request) {
-            final String index = request.param("index");
+        public String fileName(final RestRequest request) {          
+        	final String index = request.param("index");
             if (index == null) {
                 return "_all.json";
             }
@@ -81,6 +81,31 @@ public enum ContentType {
                 return index + ".json";
             }
             return index + "_" + type + ".json";
+        }
+    },
+    EXCEL2007(40) {
+        @Override
+        public String contentType() {
+            return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        }
+
+        @Override
+        public DataContent dataContent(final Client client,
+                final RestRequest request, final RestChannel channel) {
+            return new XlsContent(client, request, channel, true);
+        }
+
+        @Override
+        public String fileName(final RestRequest request) {  	
+        	final String index = request.param("index");
+            if (index == null) {
+                return "_all.xlsx";
+            }
+            final String type = request.param("type");
+            if (type == null) {
+                return index + ".xlsx";
+            }
+            return index + "_" + type + ".xlsx";
         }
     };
 

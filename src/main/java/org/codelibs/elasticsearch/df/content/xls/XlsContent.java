@@ -1,12 +1,9 @@
 package org.codelibs.elasticsearch.df.content.xls;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collections;
 import java.util.HashMap;
@@ -19,6 +16,8 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtil;
@@ -38,6 +37,8 @@ import org.elasticsearch.search.SearchHits;
 
 public class XlsContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(XlsContent.class);
+    
+    private static final int SXSSF_FLUSH_COUNT = 1000;
 
     private boolean appnedHeader;
 
@@ -46,9 +47,16 @@ public class XlsContent extends DataContent {
     private boolean modifiableFieldSet;
 
     private final Channel nettyChannel;
-
+    
+    private final boolean isExcel2007;
+    
     public XlsContent(final Client client, final RestRequest request,
             final RestChannel channel) {
+    	this(client, request, channel, false);
+    }
+
+    public XlsContent(final Client client, final RestRequest request,
+            final RestChannel channel, boolean isExcel2007) {
         super(client, request);
 
         appnedHeader = request.paramAsBoolean("append.header", true);
@@ -67,10 +75,12 @@ public class XlsContent extends DataContent {
         }
 
         nettyChannel = NettyUtils.getChannel(channel);
+        
+        this.isExcel2007 = isExcel2007;
 
         if (logger.isDebugEnabled()) {
             logger.debug("appnedHeader: " + appnedHeader + ", headerSet: "
-                    + headerSet + ", nettyChannel: " + nettyChannel);
+                    + headerSet + ", nettyChannel: " + nettyChannel + ", isExcel2007: " + isExcel2007);
         }
     }
 
@@ -92,13 +102,41 @@ public class XlsContent extends DataContent {
         protected ActionListener<Void> listener;
 
         protected File outputFile;
-
+        
+        private Workbook workbook;
+        private Sheet sheet;
         private int currentCount = 0;
 
         protected OnLoadListener(final File outputFile,
                 final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
+            
+            workbook = getWorkbook(isExcel2007);
+            sheet = workbook.createSheet();
+
+        }
+        
+        private Workbook getWorkbook(boolean isExcel2007) {
+        	if (isExcel2007) {
+        		return new SXSSFWorkbook(-1); // turn off auto-flushing and accumulate all rows in memory
+        	} else {
+        		return new HSSFWorkbook();        		
+        	}
+        }
+        
+        private void flushSheet(int currentCount, Sheet sheet) throws IOException {
+        	if (sheet instanceof SXSSFSheet) {
+                if (currentCount % SXSSF_FLUSH_COUNT == 0) {
+                	((SXSSFSheet)sheet).flushRows(0);
+                }
+        	}
+        }
+        
+        private void disposeWorkbook(Workbook workbook) {
+        	if (workbook instanceof SXSSFWorkbook) {
+        		((SXSSFWorkbook)workbook).dispose();
+        	}
         }
 
         @Override
@@ -108,30 +146,7 @@ public class XlsContent extends DataContent {
                 return;
             }
 
-            Workbook workbook;
-            Sheet sheet;
             try {
-                if (outputFile.exists()) {
-                    InputStream stream = null;
-                    try {
-                        stream = new BufferedInputStream(new FileInputStream(
-                                outputFile));
-                        workbook = new HSSFWorkbook(stream);
-                    } finally {
-                        if (stream != null) {
-                            try {
-                                stream.close();
-                            } catch (final IOException e) {
-                                // ignore
-                            }
-                        }
-                    }
-                    sheet = workbook.getSheetAt(0);
-                } else {
-                    workbook = new HSSFWorkbook();
-                    sheet = workbook.createSheet();
-                }
-
                 final SearchHits hits = response.getHits();
 
                 final int size = hits.getHits().length;
@@ -177,24 +192,30 @@ public class XlsContent extends DataContent {
                             count++;
                         }
                     }
+                    
+                    flushSheet(currentCount, sheet);
+                    
                 }
 
-                OutputStream stream = null;
-                try {
-                    stream = new BufferedOutputStream(new FileOutputStream(
-                            outputFile));
-                    workbook.write(stream);
-                    stream.flush();
-                } finally {
-                    if (stream != null) {
-                        try {
-                            stream.close();
-                        } catch (final IOException e) {
-                            // ignore
-                        }
-                    }
-                }
                 if (size == 0) {
+                    OutputStream stream = null;
+                    try {
+                        stream = new BufferedOutputStream(new FileOutputStream(
+                                outputFile));
+                        workbook.write(stream);
+                        
+                        stream.flush();
+                    } finally {
+                        if (stream != null) {
+                            try {
+                                stream.close();
+                            } catch (final IOException e) {
+                                // ignore
+                            }
+                        }
+                        
+                        disposeWorkbook(workbook);
+                    }
                     // end
                     listener.onResponse(null);
                 } else {

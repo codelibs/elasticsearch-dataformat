@@ -2,7 +2,6 @@ package org.codelibs.elasticsearch.df.rest;
 
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
-import static org.elasticsearch.rest.RestStatus.BAD_REQUEST;
 import static org.elasticsearch.search.suggest.SuggestBuilder.termSuggestion;
 
 import java.io.File;
@@ -147,6 +146,9 @@ public class RestDataAction extends BaseRestHandler {
                 || "application/x-msexcel".equals(contentType)
                 || "xls".equalsIgnoreCase(contentType)) {
             return ContentType.EXCEL;
+        } else if ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".equals(contentType)
+        		|| "xlsx".equalsIgnoreCase(contentType)) {
+        	return ContentType.EXCEL2007;
         } else if ("text/javascript".equals(contentType)
                 || "application/json".equals(contentType)
                 || "json".equalsIgnoreCase(contentType)) {
@@ -169,7 +171,6 @@ public class RestDataAction extends BaseRestHandler {
             nettyResponse.setHeader("Content-Disposition",
                     "attachment; filename=\"" + contentType.fileName(request)
                             + "\"");
-            nettyResponse.setHeader(HttpHeaders.Names.COOKIE, "fileDownload=true; path=/");
 
             FileInputStream fis = null;
             FileChannel fileChannel = null;
