@@ -148,6 +148,9 @@ public class RestDataAction extends BaseRestHandler {
                 || "application/x-msexcel".equals(contentType)
                 || "xls".equalsIgnoreCase(contentType)) {
             return ContentType.EXCEL;
+        } else if ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".equals(contentType)
+        		|| "xlsx".equalsIgnoreCase(contentType)) {
+        	return ContentType.EXCEL2007;
         } else if ("text/javascript".equals(contentType)
                 || "application/json".equals(contentType)
                 || "json".equalsIgnoreCase(contentType)) {
