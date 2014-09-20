@@ -21,8 +21,8 @@ public enum ContentType {
         }
 
         @Override
-        public String fileName(final RestRequest request) {        	
-        	final String index = request.param("index");
+        public String fileName(final RestRequest request) {
+            final String index = request.param("index");
             if (index == null) {
                 return "_all.csv";
             }
@@ -46,8 +46,8 @@ public enum ContentType {
         }
 
         @Override
-        public String fileName(final RestRequest request) {     	
-        	final String index = request.param("index");
+        public String fileName(final RestRequest request) {
+            final String index = request.param("index");
             if (index == null) {
                 return "_all.xls";
             }
@@ -71,8 +71,8 @@ public enum ContentType {
         }
 
         @Override
-        public String fileName(final RestRequest request) {          
-        	final String index = request.param("index");
+        public String fileName(final RestRequest request) {
+            final String index = request.param("index");
             if (index == null) {
                 return "_all.json";
             }
@@ -96,8 +96,8 @@ public enum ContentType {
         }
 
         @Override
-        public String fileName(final RestRequest request) {  	
-        	final String index = request.param("index");
+        public String fileName(final RestRequest request) {
+            final String index = request.param("index");
             if (index == null) {
                 return "_all.xlsx";
             }

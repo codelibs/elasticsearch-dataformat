@@ -87,10 +87,10 @@ public class JsonContent extends DataContent {
 
             try {
                 for (final SearchHit hit : hits) {
-                    String operation = "{\"index\":{\"_index\":\""
+                    final String operation = "{\"index\":{\"_index\":\""
                             + hit.index() + "\",\"_type\":\"" + hit.type()
                             + "\",\"_id\":\"" + hit.id() + "\"}}";
-                    String source = hit.sourceAsString();
+                    final String source = hit.sourceAsString();
                     writer.append(operation).append('\n');
                     writer.append(source).append('\n');
                 }

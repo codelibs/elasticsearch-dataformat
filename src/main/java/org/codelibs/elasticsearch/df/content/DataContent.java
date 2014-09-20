@@ -13,7 +13,7 @@ public abstract class DataContent {
     protected RestRequest request;
 
     protected ChannelBuffer channelBuffer;
-    
+
     protected Client client;
 
     public DataContent(final Client client, final RestRequest request) {

@@ -37,7 +37,7 @@ import org.elasticsearch.search.SearchHits;
 
 public class XlsContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(XlsContent.class);
-    
+
     private static final int SXSSF_FLUSH_COUNT = 1000;
 
     private static final String DEFAULT_HEADER_COLUMN = "-";
@@ -49,16 +49,16 @@ public class XlsContent extends DataContent {
     private boolean modifiableFieldSet;
 
     private final Channel nettyChannel;
-    
+
     private final boolean isExcel2007;
-    
+
     public XlsContent(final Client client, final RestRequest request,
             final RestChannel channel) {
-    	this(client, request, channel, false);
+        this(client, request, channel, false);
     }
 
     public XlsContent(final Client client, final RestRequest request,
-            final RestChannel channel, boolean isExcel2007) {
+            final RestChannel channel, final boolean isExcel2007) {
         super(client, request);
 
         appnedHeader = request.paramAsBoolean("append.header", true);
@@ -77,12 +77,13 @@ public class XlsContent extends DataContent {
         }
 
         nettyChannel = NettyUtils.getChannel(channel);
-        
+
         this.isExcel2007 = isExcel2007;
 
         if (logger.isDebugEnabled()) {
             logger.debug("appnedHeader: " + appnedHeader + ", headerSet: "
-                    + headerSet + ", nettyChannel: " + nettyChannel + ", isExcel2007: " + isExcel2007);
+                    + headerSet + ", nettyChannel: " + nettyChannel
+                    + ", isExcel2007: " + isExcel2007);
         }
     }
 
@@ -104,41 +105,44 @@ public class XlsContent extends DataContent {
         protected ActionListener<Void> listener;
 
         protected File outputFile;
-        
+
         private Workbook workbook;
+
         private Sheet sheet;
+
         private int currentCount = 0;
 
         protected OnLoadListener(final File outputFile,
                 final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
-            
+
             workbook = getWorkbook(isExcel2007);
             sheet = workbook.createSheet();
 
         }
-        
-        private Workbook getWorkbook(boolean isExcel2007) {
-        	if (isExcel2007) {
-        		return new SXSSFWorkbook(-1); // turn off auto-flushing and accumulate all rows in memory
-        	} else {
-        		return new HSSFWorkbook();        		
-        	}
+
+        private Workbook getWorkbook(final boolean isExcel2007) {
+            if (isExcel2007) {
+                return new SXSSFWorkbook(-1); // turn off auto-flushing and accumulate all rows in memory
+            } else {
+                return new HSSFWorkbook();
+            }
         }
-        
-        private void flushSheet(int currentCount, Sheet sheet) throws IOException {
-        	if (sheet instanceof SXSSFSheet) {
+
+        private void flushSheet(final int currentCount, final Sheet sheet)
+                throws IOException {
+            if (sheet instanceof SXSSFSheet) {
                 if (currentCount % SXSSF_FLUSH_COUNT == 0) {
-                	((SXSSFSheet)sheet).flushRows(0);
+                    ((SXSSFSheet) sheet).flushRows(0);
                 }
-        	}
+            }
         }
-        
-        private void disposeWorkbook(Workbook workbook) {
-        	if (workbook instanceof SXSSFWorkbook) {
-        		((SXSSFWorkbook)workbook).dispose();
-        	}
+
+        private void disposeWorkbook(final Workbook workbook) {
+            if (workbook instanceof SXSSFWorkbook) {
+                ((SXSSFWorkbook) workbook).dispose();
+            }
         }
 
         @Override
@@ -160,7 +164,7 @@ public class XlsContent extends DataContent {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
                     final Map<String, Object> dataMap = new HashMap<String, Object>();
                     MapUtil.convertToFlatMap("", sourceMap, dataMap);
-                    
+
                     for (final String key : dataMap.keySet()) {
                         if (modifiableFieldSet && !headerSet.contains(key)) {
                             headerSet.add(key);
@@ -184,7 +188,7 @@ public class XlsContent extends DataContent {
 
                     int count = 0;
                     for (final String name : headerSet) {
-                        Object value = dataMap.get(name);
+                        final Object value = dataMap.get(name);
                         final Cell cell = row.createCell(count);
                         if (value != null
                                 && value.toString().trim().length() > 0) {
@@ -194,9 +198,9 @@ public class XlsContent extends DataContent {
                         }
                         count++;
                     }
-                    
+
                     flushSheet(currentCount, sheet);
-                    
+
                 }
 
                 if (size == 0) {
@@ -205,7 +209,7 @@ public class XlsContent extends DataContent {
                         stream = new BufferedOutputStream(new FileOutputStream(
                                 outputFile));
                         workbook.write(stream);
-                        
+
                         stream.flush();
                     } finally {
                         if (stream != null) {
@@ -215,7 +219,7 @@ public class XlsContent extends DataContent {
                                 // ignore
                             }
                         }
-                        
+
                         disposeWorkbook(workbook);
                     }
                     // end
