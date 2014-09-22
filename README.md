@@ -11,7 +11,7 @@ The supported formats are CSV, Excel and JSON(Bulk).
 | River Web | elasticsearch |
 |:---------:|:-------------:|
 | master    | 1.0.0.X       |
-| 1.3.0     | 1.3.2         |
+| 1.3.1     | 1.3.2         |
 | 1.2.0     | 1.2.4         |
 | 0.1.0     | 0.90.7        |
 
@@ -22,7 +22,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-dataformat/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.3.0
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.3.1
 
 ## Supported Output Formats
 
@@ -47,6 +47,14 @@ Parameters for a query are the same as a scan query.
 ### Excel
 
     $ curl -o /tmp/data.xls -XGET "localhost:9200/{index}/{type}/_data?format=xls&source=..."
+
+| Request Parameter | Type    | Description |
+|:------------------|:-------:|:------------|
+| source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
+
+### Excel 2007
+
+    $ curl -o /tmp/data.xlsx -XGET "localhost:9200/{index}/{type}/_data?format=xlsx&source=..."
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
