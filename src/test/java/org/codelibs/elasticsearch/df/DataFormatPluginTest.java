@@ -89,9 +89,12 @@ public class DataFormatPluginTest extends TestCase {
             String content = curlResponse.getContentAsString();
             String[] lines = content.split("\n");
             assertEquals(1001, lines.length);
-            assertEquals(
-                    "\"eee.ggg\",\"aaa\",\"eee.fff\",\"ccc\",\"bbb\",\"eee.hhh\"",
-                    lines[0]);
+            assertTrue(lines[0].contains("\"aaa\""));
+            assertTrue(lines[0].contains("\"bbb\""));
+            assertTrue(lines[0].contains("\"ccc\""));
+            assertTrue(lines[0].contains("\"eee.fff\""));
+            assertTrue(lines[0].contains("\"eee.ggg\""));
+            assertTrue(lines[0].contains("\"eee.hhh\""));
         }
 
         // Download All as JSON
@@ -121,7 +124,12 @@ public class DataFormatPluginTest extends TestCase {
             String content = curlResponse.getContentAsString();
             String[] lines = content.split("\n");
             assertEquals(1001, lines.length);
-            assertEquals("\"aaa\",\"eee.ggg\"", lines[0]);
+            assertTrue(lines[0].contains("\"aaa\""));
+            assertFalse(lines[0].contains("\"bbb\""));
+            assertFalse(lines[0].contains("\"ccc\""));
+            assertFalse(lines[0].contains("\"eee.fff\""));
+            assertTrue(lines[0].contains("\"eee.ggg\""));
+            assertFalse(lines[0].contains("\"eee.hhh\""));
         }
 
         // Download All as JSON with Fields
@@ -156,10 +164,12 @@ public class DataFormatPluginTest extends TestCase {
             String content = curlResponse.getContentAsString();
             String[] lines = content.split("\n");
             assertEquals(101, lines.length);
-            assertEquals(
-                    "\"eee.ggg\",\"aaa\",\"eee.fff\",\"ccc\",\"bbb\",\"eee.hhh\"",
-                    lines[0]);
-            assertTrue(lines[1].startsWith("\"100\","));
+            assertTrue(lines[0].contains("\"aaa\""));
+            assertTrue(lines[0].contains("\"bbb\""));
+            assertTrue(lines[0].contains("\"ccc\""));
+            assertTrue(lines[0].contains("\"eee.fff\""));
+            assertTrue(lines[0].contains("\"eee.ggg\""));
+            assertTrue(lines[1].contains("\"100\""));
         }
 
         // Download All as JSON with Query
@@ -180,10 +190,8 @@ public class DataFormatPluginTest extends TestCase {
                 HSSFWorkbook book = new HSSFWorkbook(fs);
                 HSSFSheet sheet = book.getSheetAt(0);
                 assertEquals(100, sheet.getLastRowNum());
-                assertEquals("eee.ggg", sheet.getRow(0).getCell(0).toString());
-                assertEquals("aaa", sheet.getRow(0).getCell(1).toString());
-                assertEquals("100", sheet.getRow(1).getCell(0).toString());
-                assertEquals("test 100", sheet.getRow(1).getCell(1).toString());
+                assertEquals(6, sheet.getRow(0).getLastCellNum());
+                assertEquals(6, sheet.getRow(1).getLastCellNum());
             }
         }
     }
