@@ -2,7 +2,7 @@ package org.codelibs.elasticsearch.df.rest;
 
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
-import static org.elasticsearch.search.suggest.SuggestBuilder.termSuggestion;
+import static org.elasticsearch.search.suggest.SuggestBuilders.termSuggestion;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -55,7 +55,7 @@ public class RestDataAction extends BaseRestHandler {
     @Inject
     public RestDataAction(final Settings settings, final Client client,
             final RestController restController) {
-        super(settings, client);
+        super(settings, restController, client);
 
         restController.registerHandler(GET, "/_data", this);
         restController.registerHandler(POST, "/_data", this);

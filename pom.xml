@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.codelibs</groupId>
 	<artifactId>elasticsearch-dataformat</artifactId>
-	<version>1.3.2-SNAPSHOT</version>
+	<version>1.4.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<name>Elasticsearch Data Format</name>
 	<description>This plugin provides several response formats.</description>
@@ -27,7 +27,7 @@
 		<version>7</version>
 	</parent>
 	<properties>
-		<elasticsearch.version>1.3.2</elasticsearch.version>
+		<elasticsearch.version>1.4.0.Beta1</elasticsearch.version>
 	</properties>
 	<build>
 		<plugins>
@@ -191,7 +191,7 @@
 		<dependency>
 			<groupId>org.codelibs</groupId>
 			<artifactId>elasticsearch-cluster-runner</artifactId>
-			<version>1.3.2.3</version>
+			<version>1.4.0.0</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
