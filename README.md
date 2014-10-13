@@ -8,9 +8,10 @@ The supported formats are CSV, Excel and JSON(Bulk).
 
 ## Version
 
-| River Web | elasticsearch |
+| Version   | elasticsearch |
 |:---------:|:-------------:|
 | master    | 1.0.0.X       |
+| 1.4.0     | 1.4.0.Beta1   |
 | 1.3.1     | 1.3.2         |
 | 1.2.0     | 1.2.4         |
 | 0.1.0     | 0.90.7        |
@@ -22,7 +23,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-dataformat/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.3.1
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.4.0
 
 ## Supported Output Formats
 
