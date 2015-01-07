@@ -203,7 +203,7 @@ public class XlsContent extends DataContent {
 
                 }
 
-                if (size == 0) {
+                if (size == 0 || disableScroll) {
                     OutputStream stream = null;
                     try {
                         stream = new BufferedOutputStream(new FileOutputStream(

@@ -171,7 +171,7 @@ public class CsvContent extends DataContent {
                     csvWriter.writeValues(dataList);
                 }
 
-                if (size == 0) {
+                if (size == 0 || disableScroll) {
                     // end
                     csvWriter.flush();
                     close();

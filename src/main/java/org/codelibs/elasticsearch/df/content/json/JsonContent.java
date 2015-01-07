@@ -95,7 +95,7 @@ public class JsonContent extends DataContent {
                     writer.append(source).append('\n');
                 }
 
-                if (size == 0) {
+                if (size == 0 || disableScroll) {
                     // end
                     writer.flush();
                     close();

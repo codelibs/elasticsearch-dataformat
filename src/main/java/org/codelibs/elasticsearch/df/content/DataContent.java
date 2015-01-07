@@ -15,10 +15,13 @@ public abstract class DataContent {
     protected ChannelBuffer channelBuffer;
 
     protected Client client;
+    
+    protected boolean disableScroll;
 
     public DataContent(final Client client, final RestRequest request) {
         this.client = client;
         this.request = request;
+        this.disableScroll = request.paramAsBoolean("disableScroll", false);
     }
 
     public abstract void write(File outputFile, SearchResponse response,
