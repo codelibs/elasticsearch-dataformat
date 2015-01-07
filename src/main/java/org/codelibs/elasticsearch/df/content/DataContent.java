@@ -2,6 +2,7 @@ package org.codelibs.elasticsearch.df.content;
 
 import java.io.File;
 
+import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
@@ -21,7 +22,7 @@ public abstract class DataContent {
     public DataContent(final Client client, final RestRequest request) {
         this.client = client;
         this.request = request;
-        this.disableScroll = request.paramAsBoolean("disableScroll", false);
+        this.disableScroll = RequestUtil.disableScroll(request);
     }
 
     public abstract void write(File outputFile, SearchResponse response,

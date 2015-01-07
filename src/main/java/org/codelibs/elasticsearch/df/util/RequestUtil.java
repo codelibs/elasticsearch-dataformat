@@ -21,9 +21,12 @@ public class RequestUtil {
 
 	public static void setScroll(RestRequest request,
 			SearchRequestBuilder prepareSearch) {
-		final boolean disableScroll = request.paramAsBoolean("disableScroll", false);
-		if(!disableScroll) {
+		if(!disableScroll(request)) {
 			prepareSearch.setScroll(RequestUtil.getScroll(request));
 		}
+	}
+	
+	public static boolean disableScroll(RestRequest request) {
+		return request.paramAsBoolean("from", false) || request.paramAsBoolean("size", false);
 	}
 }
