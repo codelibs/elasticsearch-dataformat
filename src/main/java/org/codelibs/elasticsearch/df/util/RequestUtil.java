@@ -27,6 +27,6 @@ public class RequestUtil {
 	}
 	
 	public static boolean disableScroll(RestRequest request) {
-		return request.paramAsBoolean("from", false) || request.paramAsBoolean("size", false);
+		return request.paramAsBoolean("from", false);
 	}
 }
