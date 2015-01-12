@@ -100,8 +100,10 @@ public class RestDataAction extends BaseRestHandler {
             }
 
             prepareSearch.setSearchType(request.param("search_type"));
+            
+            RequestUtil.setScroll(request, prepareSearch);
 
-            prepareSearch.setScroll(RequestUtil.getScroll(request));
+//            prepareSearch.setScroll(RequestUtil.getScroll(request));
 
             final String[] types = request.paramAsStringArray("type",
                     emptyStrings);
