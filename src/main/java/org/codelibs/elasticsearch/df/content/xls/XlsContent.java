@@ -26,6 +26,7 @@ import org.codelibs.elasticsearch.util.lang.StringUtils;
 import org.codelibs.elasticsearch.util.netty.NettyUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
@@ -53,13 +54,9 @@ public class XlsContent extends DataContent {
     private final boolean isExcel2007;
 
     public XlsContent(final Client client, final RestRequest request,
-            final RestChannel channel) {
-        this(client, request, channel, false);
-    }
-
-    public XlsContent(final Client client, final RestRequest request,
-            final RestChannel channel, final boolean isExcel2007) {
-        super(client, request);
+            final RestChannel channel, final SearchType searchType,
+            final boolean isExcel2007) {
+        super(client, request, searchType);
 
         appnedHeader = request.paramAsBoolean("append.header", true);
         final String[] fields = request.paramAsStringArray("fl",
@@ -152,13 +149,21 @@ public class XlsContent extends DataContent {
                 return;
             }
 
+            final String scrollId = response.getScrollId();
+            if (isFirstScan()) {
+                client.prepareSearchScroll(scrollId)
+                        .setScroll(RequestUtil.getScroll(request))
+                        .execute(this);
+                return;
+            }
+
             try {
                 final SearchHits hits = response.getHits();
 
                 final int size = hits.getHits().length;
-                logger.info("scrollId: " + response.getScrollId()
-                        + ", totalHits: " + hits.totalHits() + ", hits: "
-                        + size + ", current: " + (currentCount + size));
+                logger.info("scrollId: " + scrollId + ", totalHits: "
+                        + hits.totalHits() + ", hits: " + size + ", current: "
+                        + (currentCount + size));
 
                 for (final SearchHit hit : hits) {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
@@ -203,7 +208,7 @@ public class XlsContent extends DataContent {
 
                 }
 
-                if (size == 0 || disableScroll) {
+                if (size == 0 || scrollId == null) {
                     OutputStream stream = null;
                     try {
                         stream = new BufferedOutputStream(new FileOutputStream(
@@ -225,7 +230,7 @@ public class XlsContent extends DataContent {
                     // end
                     listener.onResponse(null);
                 } else {
-                    client.prepareSearchScroll(response.getScrollId())
+                    client.prepareSearchScroll(scrollId)
                             .setScroll(RequestUtil.getScroll(request))
                             .execute(this);
                 }

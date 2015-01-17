@@ -24,6 +24,7 @@ import org.codelibs.elasticsearch.util.lang.StringUtils;
 import org.codelibs.elasticsearch.util.netty.NettyUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
@@ -49,8 +50,8 @@ public class CsvContent extends DataContent {
     private final Channel nettyChannel;
 
     public CsvContent(final Client client, final RestRequest request,
-            final RestChannel channel) {
-        super(client, request);
+            final RestChannel channel, final SearchType searchType) {
+        super(client, request, searchType);
         csvConfig = new CsvConfig(
                 request.param("csv.separator", ",").charAt(0), request.param(
                         "csv.quote", "\"").charAt(0), request.param(
@@ -136,11 +137,19 @@ public class CsvContent extends DataContent {
                 return;
             }
 
+            final String scrollId = response.getScrollId();
+            if (isFirstScan()) {
+                client.prepareSearchScroll(scrollId)
+                        .setScroll(RequestUtil.getScroll(request))
+                        .execute(this);
+                return;
+            }
+
             final SearchHits hits = response.getHits();
 
             final int size = hits.getHits().length;
             currentCount += size;
-            logger.info("scrollId: " + response.getScrollId() + ", totalHits: "
+            logger.info("scrollId: " + scrollId + ", totalHits: "
                     + hits.totalHits() + ", hits: " + size + ", current: "
                     + currentCount);
 
@@ -171,13 +180,13 @@ public class CsvContent extends DataContent {
                     csvWriter.writeValues(dataList);
                 }
 
-                if (size == 0 || disableScroll) {
+                if (size == 0 || scrollId == null) {
                     // end
                     csvWriter.flush();
                     close();
                     listener.onResponse(null);
                 } else {
-                    client.prepareSearchScroll(response.getScrollId())
+                    client.prepareSearchScroll(scrollId)
                             .setScroll(RequestUtil.getScroll(request))
                             .execute(this);
                 }

@@ -3,6 +3,7 @@ package org.codelibs.elasticsearch.df.content;
 import org.codelibs.elasticsearch.df.content.csv.CsvContent;
 import org.codelibs.elasticsearch.df.content.json.JsonContent;
 import org.codelibs.elasticsearch.df.content.xls.XlsContent;
+import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
@@ -16,8 +17,9 @@ public enum ContentType {
 
         @Override
         public DataContent dataContent(final Client client,
-                final RestRequest request, final RestChannel channel) {
-            return new CsvContent(client, request, channel);
+                final RestRequest request, final RestChannel channel,
+                final SearchType searchType) {
+            return new CsvContent(client, request, channel, searchType);
         }
 
         @Override
@@ -41,8 +43,9 @@ public enum ContentType {
 
         @Override
         public DataContent dataContent(final Client client,
-                final RestRequest request, final RestChannel channel) {
-            return new XlsContent(client, request, channel);
+                final RestRequest request, final RestChannel channel,
+                final SearchType searchType) {
+            return new XlsContent(client, request, channel, searchType, false);
         }
 
         @Override
@@ -66,8 +69,9 @@ public enum ContentType {
 
         @Override
         public DataContent dataContent(final Client client,
-                final RestRequest request, final RestChannel channel) {
-            return new JsonContent(client, request, channel);
+                final RestRequest request, final RestChannel channel,
+                final SearchType searchType) {
+            return new JsonContent(client, request, channel, searchType);
         }
 
         @Override
@@ -91,8 +95,9 @@ public enum ContentType {
 
         @Override
         public DataContent dataContent(final Client client,
-                final RestRequest request, final RestChannel channel) {
-            return new XlsContent(client, request, channel, true);
+                final RestRequest request, final RestChannel channel,
+                final SearchType searchType) {
+            return new XlsContent(client, request, channel, searchType, true);
         }
 
         @Override
@@ -124,5 +129,5 @@ public enum ContentType {
     public abstract String fileName(RestRequest request);
 
     public abstract DataContent dataContent(Client client, RestRequest request,
-            RestChannel channel);
+            RestChannel channel, SearchType searchType);
 }

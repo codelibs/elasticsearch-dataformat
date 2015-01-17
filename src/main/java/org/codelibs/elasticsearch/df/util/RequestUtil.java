@@ -2,11 +2,12 @@ package org.codelibs.elasticsearch.df.util;
 
 import static org.elasticsearch.common.unit.TimeValue.parseTimeValue;
 
-import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.rest.RestRequest;
 
 public class RequestUtil {
+    private static final TimeValue DEFAULT_SCROLL = new TimeValue(60000);
+
     private RequestUtil() {
     }
 
@@ -15,18 +16,7 @@ public class RequestUtil {
         if (scroll != null) {
             return parseTimeValue(scroll, null);
         } else {
-            return new TimeValue(60000);
+            return DEFAULT_SCROLL;
         }
     }
-
-	public static void setScroll(RestRequest request,
-			SearchRequestBuilder prepareSearch) {
-		if(!disableScroll(request)) {
-			prepareSearch.setScroll(RequestUtil.getScroll(request));
-		}
-	}
-	
-	public static boolean disableScroll(RestRequest request) {
-		return request.paramAsBoolean("from", false);
-	}
 }

@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Map;
 
 import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.ContentType;
@@ -20,6 +21,7 @@ import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.Strings;
@@ -46,6 +48,7 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.lookup.SourceLookup;
 import org.elasticsearch.search.sort.SortOrder;
 
 public class RestDataAction extends BaseRestHandler {
@@ -63,6 +66,7 @@ public class RestDataAction extends BaseRestHandler {
         restController.registerHandler(POST, "/{index}/_data", this);
         restController.registerHandler(GET, "/{index}/{type}/_data", this);
         restController.registerHandler(POST, "/{index}/{type}/_data", this);
+
     }
 
     @Override
@@ -77,10 +81,14 @@ public class RestDataAction extends BaseRestHandler {
                 logger.debug("indices: " + indices);
             }
             prepareSearch = client.prepareSearch(indices);
+            Object fromObj = request.param("from");
             // get the content, and put it in the body
             if (request.hasContent()) {
                 prepareSearch.setSource(request.content(),
                         request.contentUnsafe());
+                final Map<String, Object> map = SourceLookup
+                        .sourceAsMap(request.content());
+                fromObj = map.get("from");
             } else {
                 final String source = request.param("source");
                 if (source != null) {
@@ -88,22 +96,32 @@ public class RestDataAction extends BaseRestHandler {
                     if (logger.isDebugEnabled()) {
                         logger.debug("source: " + source);
                     }
+                    final Map<String, Object> map = XContentFactory
+                            .xContent(source).createParser(source)
+                            .mapAndClose();
+                    fromObj = map.get("from");
                 }
+            }
+            if (fromObj == null) {
+                prepareSearch.setScroll(RequestUtil.getScroll(request));
             }
             // add extra source based on the request parameters
             final XContentBuilder builder = XContentFactory
                     .contentBuilder(XContentType.JSON);
-            final SearchSourceBuilder extraSource = parseSearchSource(request);
+            final SearchSourceBuilder extraSource = parseSearchSource(request,
+                    prepareSearch);
             if (extraSource != null) {
                 prepareSearch.setExtraSource(extraSource.toXContent(builder,
                         ToXContent.EMPTY_PARAMS));
             }
 
-            prepareSearch.setSearchType(request.param("search_type"));
-            
-            RequestUtil.setScroll(request, prepareSearch);
-
-//            prepareSearch.setScroll(RequestUtil.getScroll(request));
+            if (request.hasParam("search_type")) {
+                prepareSearch.setSearchType(request.param("search_type"));
+            } else if (fromObj == null) {
+                prepareSearch.setSearchType("scan");
+            } else {
+                prepareSearch.setSearchType("query_then_fetch");
+            }
 
             final String[] types = request.paramAsStringArray("type",
                     emptyStrings);
@@ -117,7 +135,7 @@ public class RestDataAction extends BaseRestHandler {
 
             prepareSearch.setListenerThreaded(false);
             prepareSearch.execute(new SearchResponseListener(request, channel,
-                    client));
+                    client, prepareSearch.request().searchType()));
         } catch (final Exception e) {
             logger.error("failed to parse search request parameters", e);
             try {
@@ -208,7 +226,7 @@ public class RestDataAction extends BaseRestHandler {
     }
 
     public static SearchSourceBuilder parseSearchSource(
-            final RestRequest request) {
+            final RestRequest request, final SearchRequestBuilder prepareSearch) {
         SearchSourceBuilder searchSourceBuilder = null;
         final String queryString = request.param("q");
         if (queryString != null) {
@@ -379,11 +397,15 @@ public class RestDataAction extends BaseRestHandler {
 
         private Client client;
 
+        private SearchType searchType;
+
         SearchResponseListener(final RestRequest request,
-                final RestChannel channel, final Client client) {
+                final RestChannel channel, final Client client,
+                final SearchType searchType) {
             this.request = request;
             this.channel = channel;
             this.client = client;
+            this.searchType = searchType;
         }
 
         @Override
@@ -416,7 +438,7 @@ public class RestDataAction extends BaseRestHandler {
                                 + outputFile.getAbsolutePath());
                     }
                     final DataContent dataContent = contentType.dataContent(
-                            client, request, channel);
+                            client, request, channel, searchType);
                     dataContent.write(outputFile, response,
                             new ActionListener<Void>() {
 

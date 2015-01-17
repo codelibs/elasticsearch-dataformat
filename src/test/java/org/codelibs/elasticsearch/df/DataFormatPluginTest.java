@@ -2,6 +2,7 @@ package org.codelibs.elasticsearch.df;
 
 import static org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner.newConfigs;
 
+import java.io.IOException;
 import java.io.InputStream;
 
 import junit.framework.TestCase;
@@ -81,13 +82,19 @@ public class DataFormatPluginTest extends TestCase {
             assertEquals(1000, searchResponse.getHits().getTotalHits());
         }
 
-        Node node = runner.node();
+        assertCsvDownload();
+        assertJsonDownload();
+        assertExcelDownload();
+    }
+
+    private void assertCsvDownload() throws IOException {
+        final Node node = runner.node();
 
         // Download All as CSV
         try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
                 .param("format", "csv").execute()) {
-            String content = curlResponse.getContentAsString();
-            String[] lines = content.split("\n");
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
             assertEquals(1001, lines.length);
             assertTrue(lines[0].contains("\"aaa\""));
             assertTrue(lines[0].contains("\"bbb\""));
@@ -97,32 +104,11 @@ public class DataFormatPluginTest extends TestCase {
             assertTrue(lines[0].contains("\"eee.hhh\""));
         }
 
-        // Download All as JSON
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
-                .param("format", "json").execute()) {
-            String content = curlResponse.getContentAsString();
-            String[] lines = content.split("\n");
-            assertEquals(2000, lines.length);
-            assertTrue(lines[0].startsWith("{\"index\""));
-            assertTrue(lines[1].startsWith("{\"aaa\""));
-        }
-
-        // Download All as Excel
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
-                .param("format", "xls").execute()) {
-            try (InputStream is = curlResponse.getContentAsStream()) {
-                POIFSFileSystem fs = new POIFSFileSystem(is);
-                HSSFWorkbook book = new HSSFWorkbook(fs);
-                HSSFSheet sheet = book.getSheetAt(0);
-                assertEquals(1000, sheet.getLastRowNum());
-            }
-        }
-
         // Download All as CSV with Fields
         try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
                 .param("format", "csv").param("fl", "aaa,eee.ggg").execute()) {
-            String content = curlResponse.getContentAsString();
-            String[] lines = content.split("\n");
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
             assertEquals(1001, lines.length);
             assertTrue(lines[0].contains("\"aaa\""));
             assertFalse(lines[0].contains("\"bbb\""));
@@ -132,37 +118,13 @@ public class DataFormatPluginTest extends TestCase {
             assertFalse(lines[0].contains("\"eee.hhh\""));
         }
 
-        // Download All as JSON with Fields
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
-                .param("format", "json").param("fl", "aaa,eee.ggg").execute()) {
-            String content = curlResponse.getContentAsString();
-            String[] lines = content.split("\n");
-            assertEquals(2000, lines.length);
-            assertTrue(lines[0].startsWith("{\"index\"")); // TODO
-            assertTrue(lines[1].startsWith("{\"aaa\"")); // TODO
-        }
+        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"item.bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
-        // Download All as Excel with Fields
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
-                .param("format", "xls").param("fl", "aaa,eee.ggg").execute()) {
-            try (InputStream is = curlResponse.getContentAsStream()) {
-                POIFSFileSystem fs = new POIFSFileSystem(is);
-                HSSFWorkbook book = new HSSFWorkbook(fs);
-                HSSFSheet sheet = book.getSheetAt(0);
-                assertEquals(1000, sheet.getLastRowNum());
-                HSSFRow row = sheet.getRow(0);
-                assertEquals("aaa", row.getCell(0).toString());
-                assertEquals("eee.ggg", row.getCell(1).toString());
-            }
-        }
-
-        String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"item.bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
-
-        // Download All as CSV with Query
+        // Download 100 docs as CSV with Query
         try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
                 .param("format", "csv").body(query).execute()) {
-            String content = curlResponse.getContentAsString();
-            String[] lines = content.split("\n");
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
             assertEquals(101, lines.length);
             assertTrue(lines[0].contains("\"aaa\""));
             assertTrue(lines[0].contains("\"bbb\""));
@@ -172,27 +134,197 @@ public class DataFormatPluginTest extends TestCase {
             assertTrue(lines[1].contains("\"100\""));
         }
 
-        // Download All as JSON with Query
+        // Download 10 docs as CSV
         try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
-                .param("format", "json").body(query).execute()) {
-            String content = curlResponse.getContentAsString();
-            String[] lines = content.split("\n");
-            assertEquals(200, lines.length);
-            assertTrue(lines[0].startsWith("{\"index\""));
-            assertTrue(lines[1].startsWith("{\"aaa\":\"test 100\","));
+                .param("q", "*:*").param("format", "csv").param("from", "500")
+                .execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(11, lines.length);
         }
 
-        // Download All as Excel with Query
+        // Download 500 docs as CSV
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("q", "*:*").param("format", "csv").param("from", "500")
+                .param("size", "1000").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(501, lines.length);
+        }
+
+        final String queryWithFrom = "{\"query\":{\"match_all\":{}},\"from\":900,\"size\":500,\"sort\":[\"bbb\"]}";
+
+        // Download All as CSV with Query and from
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "csv").body(queryWithFrom).execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(101, lines.length);
+        }
+
+        // Download All as CSV with Query and from
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "csv").param("source", queryWithFrom)
+                .execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(101, lines.length);
+        }
+
+        // Download All as CSV with search_type
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("search_type", "query_then_fetch")
+                .param("format", "csv").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(1001, lines.length);
+            assertTrue(lines[0].contains("\"aaa\""));
+            assertTrue(lines[0].contains("\"bbb\""));
+            assertTrue(lines[0].contains("\"ccc\""));
+            assertTrue(lines[0].contains("\"eee.fff\""));
+            assertTrue(lines[0].contains("\"eee.ggg\""));
+            assertTrue(lines[0].contains("\"eee.hhh\""));
+        }
+    }
+
+    private void assertExcelDownload() throws IOException {
+        final Node node = runner.node();
+
+        // Download All as Excel
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "xls").execute()) {
+            try (InputStream is = curlResponse.getContentAsStream()) {
+                final POIFSFileSystem fs = new POIFSFileSystem(is);
+                final HSSFWorkbook book = new HSSFWorkbook(fs);
+                final HSSFSheet sheet = book.getSheetAt(0);
+                assertEquals(1000, sheet.getLastRowNum());
+            }
+        }
+
+        // Download All as Excel with Fields
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "xls").param("fl", "aaa,eee.ggg").execute()) {
+            try (InputStream is = curlResponse.getContentAsStream()) {
+                final POIFSFileSystem fs = new POIFSFileSystem(is);
+                final HSSFWorkbook book = new HSSFWorkbook(fs);
+                final HSSFSheet sheet = book.getSheetAt(0);
+                assertEquals(1000, sheet.getLastRowNum());
+                final HSSFRow row = sheet.getRow(0);
+                assertEquals("aaa", row.getCell(0).toString());
+                assertEquals("eee.ggg", row.getCell(1).toString());
+            }
+        }
+
+        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"item.bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
+
+        // Download 100 docs as Excel with Query
         try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
                 .param("format", "xls").body(query).execute()) {
             try (InputStream is = curlResponse.getContentAsStream()) {
-                POIFSFileSystem fs = new POIFSFileSystem(is);
-                HSSFWorkbook book = new HSSFWorkbook(fs);
-                HSSFSheet sheet = book.getSheetAt(0);
+                final POIFSFileSystem fs = new POIFSFileSystem(is);
+                final HSSFWorkbook book = new HSSFWorkbook(fs);
+                final HSSFSheet sheet = book.getSheetAt(0);
                 assertEquals(100, sheet.getLastRowNum());
                 assertEquals(6, sheet.getRow(0).getLastCellNum());
                 assertEquals(6, sheet.getRow(1).getLastCellNum());
             }
         }
+
+        // Download All as Excel with search_type
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("search_type", "query_then_fetch")
+                .param("format", "xls").execute()) {
+            try (InputStream is = curlResponse.getContentAsStream()) {
+                final POIFSFileSystem fs = new POIFSFileSystem(is);
+                final HSSFWorkbook book = new HSSFWorkbook(fs);
+                final HSSFSheet sheet = book.getSheetAt(0);
+                assertEquals(1000, sheet.getLastRowNum());
+            }
+        }
     }
+
+    private void assertJsonDownload() throws IOException {
+        final Node node = runner.node();
+
+        // Download All as JSON
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "json").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(2000, lines.length);
+            assertTrue(lines[0].startsWith("{\"index\""));
+            assertTrue(lines[1].startsWith("{\"aaa\""));
+        }
+
+        // Download All as JSON with Fields
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "json").param("fl", "aaa,eee.ggg").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(2000, lines.length);
+            assertTrue(lines[0].startsWith("{\"index\"")); // TODO
+            assertTrue(lines[1].startsWith("{\"aaa\"")); // TODO
+        }
+
+        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"item.bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
+
+        // Download 100 docs as JSON with Query
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "json").body(query).execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(200, lines.length);
+            assertTrue(lines[0].startsWith("{\"index\""));
+            assertTrue(lines[1].startsWith("{\"aaa\":\"test 100\","));
+        }
+
+        // Download 10 docs as JSON
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("q", "*:*").param("format", "json").param("from", "500")
+                .execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(20, lines.length);
+        }
+
+        // Download 500 docs as JSON
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("q", "*:*").param("format", "json").param("from", "500")
+                .param("size", "1000").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(1000, lines.length);
+        }
+
+        final String queryWithFrom = "{\"query\":{\"match_all\":{}},\"from\":900,\"size\":500,\"sort\":[\"bbb\"]}";
+
+        // Download All as JSON with Query and from
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "json").body(queryWithFrom).execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(200, lines.length);
+        }
+
+        // Download All as JSON with Query and from
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "json").param("source", queryWithFrom)
+                .execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(200, lines.length);
+        }
+
+        // Download All as JSON with search_type
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("search_type", "query_then_fetch")
+                .param("format", "json").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(2000, lines.length);
+            assertTrue(lines[0].startsWith("{\"index\""));
+            assertTrue(lines[1].startsWith("{\"aaa\""));
+        }
+    }
+
 }
