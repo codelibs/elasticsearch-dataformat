@@ -10,8 +10,8 @@ The supported formats are CSV, Excel and JSON(Bulk).
 
 | Version   | elasticsearch |
 |:---------:|:-------------:|
-| master    | 1.0.0.X       |
-| 1.4.0     | 1.4.0.Beta1   |
+| master    | 1.4.2         |
+| 1.4.1     | 1.4.2         |
 | 1.3.1     | 1.3.2         |
 | 1.2.0     | 1.2.4         |
 | 0.1.0     | 0.90.7        |
@@ -23,12 +23,13 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-dataformat/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.4.0
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.4.1
 
 ## Supported Output Formats
 
 This plugin allows you to download data as a format you want.
-Parameters for a query are the same as a scan query.
+If the query dsl contains "from" parameter, the query is processed as search query.
+If not, it's as scan query(all data are stored.).
 
 ### CSV
 
