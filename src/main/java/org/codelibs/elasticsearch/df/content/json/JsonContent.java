@@ -28,12 +28,18 @@ public class JsonContent extends DataContent {
 
     private final Channel nettyChannel;
 
+    private final String bulkIndex;
+
+    private final String bulkType;
+
     public JsonContent(final Client client, final RestRequest request,
             final RestChannel channel, final SearchType searchType) {
         super(client, request, searchType);
 
         nettyChannel = NettyUtils.getChannel(channel);
 
+        bulkIndex = request.param("bulk.index");
+        bulkType = request.param("bulk.type");
     }
 
     @Override
@@ -96,8 +102,12 @@ public class JsonContent extends DataContent {
 
             try {
                 for (final SearchHit hit : hits) {
+                    final String index = bulkIndex == null ? hit.index()
+                            : bulkIndex;
+                    final String type = bulkType == null ? hit.type()
+                            : bulkType;
                     final String operation = "{\"index\":{\"_index\":\""
-                            + hit.index() + "\",\"_type\":\"" + hit.type()
+                            + index + "\",\"_type\":\"" + type
                             + "\",\"_id\":\"" + hit.id() + "\"}}";
                     final String source = hit.sourceAsString();
                     writer.append(operation).append('\n');

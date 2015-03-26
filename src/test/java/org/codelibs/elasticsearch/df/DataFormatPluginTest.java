@@ -252,7 +252,18 @@ public class DataFormatPluginTest extends TestCase {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(2000, lines.length);
-            assertTrue(lines[0].startsWith("{\"index\""));
+            assertTrue(lines[0].startsWith("{\"index\":{\"_index\":\"dataset\",\"_type\":\"item\","));
+            assertTrue(lines[1].startsWith("{\"aaa\""));
+        }
+
+        // Download All as JSON with index/type
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "json").param("bulk.index", "dataset2")
+                .param("bulk.type", "item2").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(2000, lines.length);
+            assertTrue(lines[0].startsWith("{\"index\":{\"_index\":\"dataset2\",\"_type\":\"item2\","));
             assertTrue(lines[1].startsWith("{\"aaa\""));
         }
 
