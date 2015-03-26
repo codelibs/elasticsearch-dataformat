@@ -145,7 +145,7 @@
 		<dependency>
 			<groupId>org.codelibs</groupId>
 			<artifactId>elasticsearch-util</artifactId>
-			<version>1.5.1-SNAPSHOT</version>
+			<version>1.5.0</version>
 		</dependency>
 		<dependency>
 			<groupId>jp.sf.orangesignal</groupId>

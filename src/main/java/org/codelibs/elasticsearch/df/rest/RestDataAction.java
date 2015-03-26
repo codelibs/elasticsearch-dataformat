@@ -186,11 +186,12 @@ public class RestDataAction extends BaseRestHandler {
         if (channel instanceof NettyHttpChannel) {
             final DefaultHttpResponse nettyResponse = new DefaultHttpResponse(
                     HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            nettyResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE,
+            nettyResponse.headers().set(HttpHeaders.Names.CONTENT_TYPE,
                     contentType.contentType());
-            nettyResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH,
+            nettyResponse.headers().set(HttpHeaders.Names.CONTENT_LENGTH,
                     outputFile.length());
-            nettyResponse.setHeader("Content-Disposition",
+            nettyResponse.headers().set(
+                    "Content-Disposition",
                     "attachment; filename=\"" + contentType.fileName(request)
                             + "\"");
 
