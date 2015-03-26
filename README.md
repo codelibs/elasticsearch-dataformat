@@ -10,7 +10,8 @@ The supported formats are CSV, Excel and JSON(Bulk).
 
 | Version   | elasticsearch |
 |:---------:|:-------------:|
-| master    | 1.4.2         |
+| master    | 1.5.0         |
+| 1.5.0     | 1.5.0         |
 | 1.4.1     | 1.4.2         |
 | 1.3.1     | 1.3.2         |
 | 1.2.0     | 1.2.4         |
@@ -23,7 +24,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-dataformat/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.4.1
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.5.0
 
 ## Supported Output Formats
 
@@ -69,4 +70,6 @@ If not, it's as scan query(all data are stored.).
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
 | source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
+| bulk.index        | string  | Index name in Bulk file |
+| bulk.type         | string  | Type name in Bulk file |
 
