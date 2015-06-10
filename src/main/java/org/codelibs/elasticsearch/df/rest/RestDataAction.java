@@ -84,8 +84,7 @@ public class RestDataAction extends BaseRestHandler {
             Object fromObj = request.param("from");
             // get the content, and put it in the body
             if (request.hasContent()) {
-                prepareSearch.setSource(request.content(),
-                        request.contentUnsafe());
+                prepareSearch.setSource(request.content());
                 final Map<String, Object> map = SourceLookup
                         .sourceAsMap(request.content());
                 fromObj = map.get("from");
