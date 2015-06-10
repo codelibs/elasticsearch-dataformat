@@ -13,9 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import jp.sf.orangesignal.csv.CsvConfig;
-import jp.sf.orangesignal.csv.CsvWriter;
-
 import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtil;
@@ -33,6 +30,9 @@ import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+
+import com.orangesignal.csv.CsvConfig;
+import com.orangesignal.csv.CsvWriter;
 
 public class CsvContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(CsvContent.class);
