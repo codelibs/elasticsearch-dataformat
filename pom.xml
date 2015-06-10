@@ -28,6 +28,8 @@
 	</parent>
 	<properties>
 		<elasticsearch.version>1.6.0</elasticsearch.version>
+		<poi.version>3.12</poi.version>
+		<xmlbeans.version>2.6.0</xmlbeans.version>
 	</properties>
 	<build>
 		<plugins>
@@ -148,27 +150,22 @@
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi</artifactId>
-			<version>3.10.1</version>
+			<version>${poi.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
-			<version>3.10.1</version>
+			<version>${poi.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml-schemas</artifactId>
-			<version>3.10.1</version>
+			<version>${poi.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.xmlbeans</groupId>
 			<artifactId>xmlbeans</artifactId>
-			<version>2.3.0</version>
-		</dependency>
-		<dependency>
-			<groupId>dom4j</groupId>
-			<artifactId>dom4j</artifactId>
-			<version>1.6.1</version>
+			<version>${xmlbeans.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
