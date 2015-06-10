@@ -4,6 +4,7 @@ import static org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner.newCo
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.UUID;
 
 import junit.framework.TestCase;
 
@@ -32,7 +33,8 @@ public class DataFormatPluginTest extends TestCase {
             @Override
             public void build(final int number, final Builder settingsBuilder) {
             }
-        }).build(newConfigs().ramIndexStore().numOfNode(1));
+        }).build(newConfigs().ramIndexStore().numOfNode(1)
+                .clusterName(UUID.randomUUID().toString()));
 
         // wait for yellow status
         runner.ensureYellow();
