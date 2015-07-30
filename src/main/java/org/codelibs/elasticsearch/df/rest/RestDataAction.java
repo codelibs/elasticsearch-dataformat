@@ -2,6 +2,7 @@ package org.codelibs.elasticsearch.df.rest;
 
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
+import static org.elasticsearch.rest.RestStatus.OK;
 import static org.elasticsearch.search.suggest.SuggestBuilders.termSuggestion;
 
 import java.io.File;
@@ -9,9 +10,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
 import java.util.Map;
 
 import org.codelibs.elasticsearch.df.DfContentException;
+import org.codelibs.elasticsearch.df.DfSystemException;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
@@ -38,6 +41,7 @@ import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.http.netty.NettyHttpChannel;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.QueryStringQueryBuilder;
@@ -78,7 +82,7 @@ public class RestDataAction extends BaseRestHandler {
             final String[] indices = request.paramAsStringArray("index",
                     emptyStrings);
             if (logger.isDebugEnabled()) {
-                logger.debug("indices: " + indices);
+                logger.debug("indices: " + Arrays.toString(indices));
             }
             prepareSearch = client.prepareSearch(indices);
             Object fromObj = request.param("from");
@@ -231,7 +235,7 @@ public class RestDataAction extends BaseRestHandler {
         final String queryString = request.param("q");
         if (queryString != null) {
             final QueryStringQueryBuilder queryBuilder = QueryBuilders
-                    .queryString(queryString);
+                    .queryStringQuery(queryString);
             queryBuilder.defaultField(request.param("df"));
             queryBuilder.analyzer(request.param("analyzer"));
             queryBuilder.analyzeWildcard(request.paramAsBoolean(
@@ -406,6 +410,14 @@ public class RestDataAction extends BaseRestHandler {
             this.channel = channel;
             this.client = client;
             this.searchType = searchType;
+            if (request.hasParam("file")) {
+                outputFile = new File(request.param("file"));
+                final File parentFile = outputFile.getParentFile();
+                if (parentFile != null && !parentFile.isDirectory()) {
+                    throw new DfSystemException("Cannot create/access "
+                            + outputFile.getAbsolutePath());
+                }
+            }
         }
 
         @Override
@@ -431,38 +443,40 @@ public class RestDataAction extends BaseRestHandler {
             }
 
             try {
-                outputFile = File.createTempFile("es_df_output_", ".dat");
-                if (outputFile.delete()) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("outputFile: "
-                                + outputFile.getAbsolutePath());
-                    }
-                    final DataContent dataContent = contentType.dataContent(
-                            client, request, channel, searchType);
-                    dataContent.write(outputFile, response,
-                            new ActionListener<Void>() {
+                final boolean useLocalFile = outputFile != null;
+                if (outputFile == null) {
+                    outputFile = File.createTempFile("es_df_output_", ".dat");
+                }
+                if (logger.isDebugEnabled()) {
+                    logger.debug("outputFile: " + outputFile.getAbsolutePath());
+                }
+                final DataContent dataContent = contentType.dataContent(client,
+                        request, channel, searchType);
+                dataContent.write(outputFile, response,
+                        new ActionListener<Void>() {
 
-                                @Override
-                                public void onResponse(final Void response) {
-                                    try {
+                            @Override
+                            public void onResponse(final Void response) {
+                                try {
+                                    if (useLocalFile) {
+                                        sendResponse(request,channel,
+                                                outputFile.getAbsolutePath());
+                                    } else {
                                         writeResponse(request, channel,
                                                 contentType, outputFile);
                                         SearchResponseListener.this
                                                 .deleteOutputFile();
-                                    } catch (final Exception e) {
-                                        onFailure(e);
                                     }
+                                } catch (final Exception e) {
+                                    onFailure(e);
                                 }
+                            }
 
-                                @Override
-                                public void onFailure(final Throwable e) {
-                                    SearchResponseListener.this.onFailure(e);
-                                }
-                            });
-                } else {
-                    onFailure(new DfContentException(
-                            "Could not create a temporary file on the local system."));
-                }
+                            @Override
+                            public void onFailure(final Throwable e) {
+                                SearchResponseListener.this.onFailure(e);
+                            }
+                        });
             } catch (final IOException e) {
                 onFailure(e);
             }
@@ -484,6 +498,22 @@ public class RestDataAction extends BaseRestHandler {
                 logger.error("Failed to send failure response", e1);
             }
         }
+    }
 
+    private void sendResponse(final RestRequest request,final RestChannel channel, final String file) {
+        try {
+            final XContentBuilder builder = JsonXContent.contentBuilder();
+            final String pretty=request.param("pretty");
+            if (pretty != null && !"false".equalsIgnoreCase(pretty)) {
+                builder.prettyPrint().lfAtEnd();
+            }
+            builder.startObject();
+            builder.field("acknowledged", true);
+            builder.field("file", file);
+            builder.endObject();
+            channel.sendResponse(new BytesRestResponse(OK, builder));
+        } catch (final IOException e) {
+            throw new DfSystemException("Failed to create a resposne.", e);
+        }
     }
 }

@@ -2,11 +2,14 @@ package org.codelibs.elasticsearch.df;
 
 import static org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner.newConfigs;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-
-import junit.framework.TestCase;
 
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
@@ -20,6 +23,8 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.settings.ImmutableSettings.Builder;
 import org.elasticsearch.node.Node;
 
+import junit.framework.TestCase;
+
 public class DataFormatPluginTest extends TestCase {
 
     private ElasticsearchClusterRunner runner;
@@ -32,6 +37,8 @@ public class DataFormatPluginTest extends TestCase {
         runner.onBuild(new ElasticsearchClusterRunner.Builder() {
             @Override
             public void build(final int number, final Builder settingsBuilder) {
+                settingsBuilder.put("http.cors.enabled", true);
+                settingsBuilder.put("index.unassigned.node_left.delayed_timeout","0");
             }
         }).build(newConfigs().ramIndexStore().numOfNode(1)
                 .clusterName(UUID.randomUUID().toString()));
@@ -84,9 +91,71 @@ public class DataFormatPluginTest extends TestCase {
             assertEquals(1000, searchResponse.getHits().getTotalHits());
         }
 
+        assertFile();
         assertCsvDownload();
         assertJsonDownload();
         assertExcelDownload();
+    }
+
+    private void assertFile() throws IOException {
+        final Node node = runner.node();
+
+        File csvTempFile = File.createTempFile("dftest", ".csv");
+        csvTempFile.deleteOnExit();
+        // Download All as CSV to file
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "csv")
+                .param("file", csvTempFile.getAbsolutePath()).execute()) {
+            Map<String, Object> contentAsMap = curlResponse.getContentAsMap();
+            assertEquals("true", contentAsMap.get("acknowledged").toString());
+            assertEquals(csvTempFile.getName(),
+                    new File(contentAsMap.get("file").toString()).getName());
+            final List<String> lines = Files.readAllLines(csvTempFile.toPath());
+            assertEquals(1001, lines.size());
+            final String line = lines.get(0);
+            assertTrue(line.contains("\"aaa\""));
+            assertTrue(line.contains("\"bbb\""));
+            assertTrue(line.contains("\"ccc\""));
+            assertTrue(line.contains("\"eee.fff\""));
+            assertTrue(line.contains("\"eee.ggg\""));
+            assertTrue(line.contains("\"eee.hhh\""));
+        }
+
+        File xlsTempFile = File.createTempFile("dftest", ".xls");
+        xlsTempFile.deleteOnExit();
+        // Download All as Excel to file
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "xls")
+                .param("file", xlsTempFile.getAbsolutePath()).execute()) {
+            Map<String, Object> contentAsMap = curlResponse.getContentAsMap();
+            assertEquals("true", contentAsMap.get("acknowledged").toString());
+            assertEquals(xlsTempFile.getName(),
+                    new File(contentAsMap.get("file").toString()).getName());
+            try (InputStream is = new FileInputStream(xlsTempFile)) {
+                final POIFSFileSystem fs = new POIFSFileSystem(is);
+                final HSSFWorkbook book = new HSSFWorkbook(fs);
+                final HSSFSheet sheet = book.getSheetAt(0);
+                assertEquals(1000, sheet.getLastRowNum());
+            }
+        }
+
+        File jsonTempFile = File.createTempFile("dftest", ".json");
+        jsonTempFile.deleteOnExit();
+        // Download All as JSON to file
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+                .param("format", "json")
+                .param("file", jsonTempFile.getAbsolutePath()).execute()) {
+            Map<String, Object> contentAsMap = curlResponse.getContentAsMap();
+            assertEquals("true", contentAsMap.get("acknowledged").toString());
+            assertEquals(jsonTempFile.getName(),
+                    new File(contentAsMap.get("file").toString()).getName());
+            final List<String> lines = Files
+                    .readAllLines(jsonTempFile.toPath());
+            assertEquals(2000, lines.size());
+            assertTrue(lines.get(0).startsWith(
+                    "{\"index\":{\"_index\":\"dataset\",\"_type\":\"item\","));
+            assertTrue(lines.get(1).startsWith("{\"aaa\""));
+        }
     }
 
     private void assertCsvDownload() throws IOException {
