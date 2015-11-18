@@ -8,9 +8,9 @@ The supported formats are CSV, Excel and JSON(Bulk).
 
 ## Version
 
-| Version   | elasticsearch |
+| Version   | Tested on ES  |
 |:---------:|:-------------:|
-| master    | 1.6.x         |
+| master    | 1.7.x         |
 | 1.6.0     | 1.6.0         |
 | 1.5.0     | 1.5.0         |
 | 1.4.1     | 1.4.2         |
