@@ -1,10 +1,10 @@
 package org.codelibs.elasticsearch.df;
 
 import org.codelibs.elasticsearch.df.rest.RestDataAction;
-import org.elasticsearch.plugins.AbstractPlugin;
+import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestModule;
 
-public class DataFormatPlugin extends AbstractPlugin {
+public class DataFormatPlugin extends Plugin {
     @Override
     public String name() {
         return "DataFormatPlugin";
@@ -12,7 +12,7 @@ public class DataFormatPlugin extends AbstractPlugin {
 
     @Override
     public String description() {
-        return "This is a elasticsearch-dataformat plugin.";
+        return "This plugin provides several response formats.";
     }
 
     // for Rest API

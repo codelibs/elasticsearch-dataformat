@@ -2,8 +2,8 @@ package org.codelibs.elasticsearch.df.util;
 
 import java.util.Map;
 
-public class MapUtil {
-    private MapUtil() {
+public class MapUtils {
+    private MapUtils() {
     }
 
     @SuppressWarnings("unchecked")

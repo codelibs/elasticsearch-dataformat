@@ -20,21 +20,21 @@ import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
-import org.codelibs.elasticsearch.df.util.MapUtil;
+import org.codelibs.elasticsearch.df.util.MapUtils;
+import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
-import org.codelibs.elasticsearch.util.lang.StringUtils;
-import org.codelibs.elasticsearch.util.netty.NettyUtils;
+import org.codelibs.elasticsearch.df.util.StringUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
-import org.elasticsearch.common.netty.channel.Channel;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.jboss.netty.channel.Channel;
 
 public class XlsContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(XlsContent.class);
@@ -168,7 +168,7 @@ public class XlsContent extends DataContent {
                 for (final SearchHit hit : hits) {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
                     final Map<String, Object> dataMap = new HashMap<String, Object>();
-                    MapUtil.convertToFlatMap("", sourceMap, dataMap);
+                    MapUtils.convertToFlatMap("", sourceMap, dataMap);
 
                     for (final String key : dataMap.keySet()) {
                         if (modifiableFieldSet && !headerSet.contains(key)) {

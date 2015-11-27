@@ -14,7 +14,7 @@ public class RequestUtil {
     public static TimeValue getScroll(final RestRequest request) {
         final String scroll = request.param("scroll");
         if (scroll != null) {
-            return parseTimeValue(scroll, null);
+            return parseTimeValue(scroll, DEFAULT_SCROLL, "");
         } else {
             return DEFAULT_SCROLL;
         }

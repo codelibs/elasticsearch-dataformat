@@ -17,10 +17,8 @@ import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.DfSystemException;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
+import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
-import org.codelibs.elasticsearch.util.io.IOUtils;
-import org.codelibs.elasticsearch.util.netty.NettyUtils;
-import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -29,17 +27,11 @@ import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
-import org.elasticsearch.common.netty.buffer.ChannelBuffer;
-import org.elasticsearch.common.netty.buffer.ChannelBuffers;
-import org.elasticsearch.common.netty.channel.Channel;
-import org.elasticsearch.common.netty.handler.codec.http.DefaultHttpResponse;
-import org.elasticsearch.common.netty.handler.codec.http.HttpHeaders;
-import org.elasticsearch.common.netty.handler.codec.http.HttpResponseStatus;
-import org.elasticsearch.common.netty.handler.codec.http.HttpVersion;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.http.netty.NettyHttpChannel;
@@ -54,6 +46,13 @@ import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.lookup.SourceLookup;
 import org.elasticsearch.search.sort.SortOrder;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
 public class RestDataAction extends BaseRestHandler {
 
@@ -99,10 +98,11 @@ public class RestDataAction extends BaseRestHandler {
                     if (logger.isDebugEnabled()) {
                         logger.debug("source: " + source);
                     }
-                    final Map<String, Object> map = XContentFactory
-                            .xContent(source).createParser(source)
-                            .mapAndClose();
-                    fromObj = map.get("from");
+                   try( XContentParser parser = XContentFactory
+                            .xContent(source).createParser(source)){
+                    final Map<String, Object> map = parser
+                            .map();
+                    fromObj = map.get("from");}
                 }
             }
             if (fromObj == null) {
@@ -136,7 +136,6 @@ public class RestDataAction extends BaseRestHandler {
             prepareSearch.setIndicesOptions(IndicesOptions.fromRequest(request,
                     IndicesOptions.strictExpandOpen()));
 
-            prepareSearch.setListenerThreaded(false);
             prepareSearch.execute(new SearchResponseListener(request, channel,
                     client, prepareSearch.request().searchType()));
         } catch (final Exception e) {
@@ -198,10 +197,9 @@ public class RestDataAction extends BaseRestHandler {
                     "attachment; filename=\"" + contentType.fileName(request)
                             + "\"");
 
-            FileInputStream fis = null;
             FileChannel fileChannel = null;
-            try {
-                fis = new FileInputStream(outputFile);
+            try (FileInputStream fis = new FileInputStream(outputFile)){
+                ;
                 fileChannel = fis.getChannel();
 
                 final MappedByteBuffer buffer = fileChannel.map(
@@ -222,7 +220,6 @@ public class RestDataAction extends BaseRestHandler {
                         // ignore
                     }
                 }
-                IOUtils.closeQuietly(fis);
             }
         } else {
             throw new DfContentException("The channel is not NettyHttpChannel.");
@@ -252,7 +249,7 @@ public class RestDataAction extends BaseRestHandler {
                     queryBuilder
                             .defaultOperator(QueryStringQueryBuilder.Operator.AND);
                 } else {
-                    throw new ElasticsearchIllegalArgumentException(
+                    throw new IllegalArgumentException(
                             "Unsupported defaultOperator [" + defaultOperator
                                     + "], can either be [OR] or [AND]");
                 }
@@ -349,7 +346,7 @@ public class RestDataAction extends BaseRestHandler {
             for (final String indexBoost : indicesBoost) {
                 final int divisor = indexBoost.indexOf(',');
                 if (divisor == -1) {
-                    throw new ElasticsearchIllegalArgumentException(
+                    throw new IllegalArgumentException(
                             "Illegal index boost [" + indexBoost + "], no ','");
                 }
                 final String indexName = indexBoost.substring(0, divisor);
@@ -358,7 +355,7 @@ public class RestDataAction extends BaseRestHandler {
                     searchSourceBuilder.indexBoost(indexName,
                             Float.parseFloat(sBoost));
                 } catch (final NumberFormatException e) {
-                    throw new ElasticsearchIllegalArgumentException(
+                    throw new IllegalArgumentException(
                             "Illegal index boost [" + indexBoost
                                     + "], boost not a float number");
                 }

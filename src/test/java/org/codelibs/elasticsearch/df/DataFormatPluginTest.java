@@ -20,7 +20,7 @@ import org.codelibs.elasticsearch.runner.net.Curl;
 import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.common.settings.ImmutableSettings.Builder;
+import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.node.Node;
 
 import junit.framework.TestCase;
@@ -29,8 +29,11 @@ public class DataFormatPluginTest extends TestCase {
 
     private ElasticsearchClusterRunner runner;
 
+    private String clusterName;
+
     @Override
     protected void setUp() throws Exception {
+        clusterName = "es-dataformat-" + System.currentTimeMillis();
         // create runner instance
         runner = new ElasticsearchClusterRunner();
         // create ES nodes
@@ -38,9 +41,14 @@ public class DataFormatPluginTest extends TestCase {
             @Override
             public void build(final int number, final Builder settingsBuilder) {
                 settingsBuilder.put("http.cors.enabled", true);
+                settingsBuilder.put("http.cors.allow-origin", "*");
+                settingsBuilder.put("index.number_of_shards", 3);
+                settingsBuilder.put("index.number_of_replicas", 0);
+                settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
+                settingsBuilder.put("plugin.types", "org.codelibs.elasticsearch.df.DataFormatPlugin");
                 settingsBuilder.put("index.unassigned.node_left.delayed_timeout","0");
             }
-        }).build(newConfigs().ramIndexStore().numOfNode(1)
+        }).build(newConfigs().clusterName(clusterName).numOfNode(1)
                 .clusterName(UUID.randomUUID().toString()));
 
         // wait for yellow status
@@ -189,11 +197,11 @@ public class DataFormatPluginTest extends TestCase {
             assertFalse(lines[0].contains("\"eee.hhh\""));
         }
 
-        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"item.bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
+        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
         // Download 100 docs as CSV with Query
         try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
-                .param("format", "csv").body(query).execute()) {
+                .param("format", "csv").param("search_type", "query_then_fetch").body(query).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(101, lines.length);
@@ -286,11 +294,11 @@ public class DataFormatPluginTest extends TestCase {
             }
         }
 
-        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"item.bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
+        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
         // Download 100 docs as Excel with Query
         try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
-                .param("format", "xls").body(query).execute()) {
+                .param("format", "xls").param("search_type", "query_then_fetch").body(query).execute()) {
             try (InputStream is = curlResponse.getContentAsStream()) {
                 final POIFSFileSystem fs = new POIFSFileSystem(is);
                 final HSSFWorkbook book = new HSSFWorkbook(fs);
@@ -348,11 +356,11 @@ public class DataFormatPluginTest extends TestCase {
             assertTrue(lines[1].startsWith("{\"aaa\"")); // TODO
         }
 
-        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"item.bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
+        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
         // Download 100 docs as JSON with Query
         try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
-                .param("format", "json").body(query).execute()) {
+                .param("format", "json").param("search_type", "query_then_fetch").body(query).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(200, lines.length);

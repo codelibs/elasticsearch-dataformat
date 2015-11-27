@@ -9,19 +9,19 @@ import java.io.Writer;
 
 import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
+import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
-import org.codelibs.elasticsearch.util.netty.NettyUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
-import org.elasticsearch.common.netty.channel.Channel;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.jboss.netty.channel.Channel;
 
 public class JsonContent extends DataContent {
     private static final ESLogger logger = Loggers.getLogger(JsonContent.class);

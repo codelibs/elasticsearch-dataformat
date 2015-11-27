@@ -6,8 +6,8 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.netty.buffer.ChannelBuffer;
 import org.elasticsearch.rest.RestRequest;
+import org.jboss.netty.buffer.ChannelBuffer;
 
 public abstract class DataContent {
 
