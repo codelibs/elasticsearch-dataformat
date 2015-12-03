@@ -19,11 +19,8 @@
 			<useTransitiveFiltering>true</useTransitiveFiltering>
 			<excludes>
 				<exclude>org.elasticsearch:elasticsearch</exclude>
-				<exclude>org.codelibs:elasticsearch-util</exclude>
 				<exclude>com.orangesignal:orangesignal-csv</exclude>
-				<exclude>org.apache.poi:poi</exclude>
 				<exclude>commons-codec:commons-codec</exclude>
-				<exclude>org.apache.xmlbeans:xmlbeans</exclude>
 			</excludes>
 		</dependencySet>
 	</dependencySets>

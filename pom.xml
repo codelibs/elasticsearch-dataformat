@@ -78,36 +78,19 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.codelibs:elasticsearch-util</include>
 									<include>com.orangesignal:orangesignal-csv</include>
-									<include>org.apache.poi:poi</include>
-									<include>org.apache.poi:poi-ooxml</include>
-									<include>org.apache.poi:poi-ooxml-schemas</include>
-									<include>org.apache.xmlbeans:xmlbeans</include>
 									<include>dom4j:dom4j</include>
 									<include>commons-codec:commons-codec</include>
 								</includes>
 							</artifactSet>
 							<relocations>
 								<relocation>
-									<pattern>org.codelibs.elasticsearch.util</pattern>
-									<shadedPattern>org.codelibs.elasticsearch.df.util</shadedPattern>
-								</relocation>
-								<relocation>
 									<pattern>com.orangesignal</pattern>
 									<shadedPattern>org.codelibs.elasticsearch.df.orangesignal</shadedPattern>
 								</relocation>
 								<relocation>
-									<pattern>org.apache.poi</pattern>
-									<shadedPattern>org.codelibs.elasticsearch.df.poi</shadedPattern>
-								</relocation>
-								<relocation>
 									<pattern>org.apache.commons.codec</pattern>
 									<shadedPattern>org.codelibs.elasticsearch.df.codec</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.xmlbeans</pattern>
-									<shadedPattern>org.codelibs.elasticsearch.df.xmlbeans</shadedPattern>
 								</relocation>
 							</relocations>
 						</configuration>
