@@ -32,7 +32,6 @@
 		<maven.compiler.source>1.7</maven.compiler.source>
 		<maven.compiler.target>1.7</maven.compiler.target>
 		<poi.version>3.12</poi.version>
-		<xmlbeans.version>2.6.0</xmlbeans.version>
 	</properties>
 	<build>
 		<plugins>
@@ -67,6 +66,55 @@
 				</executions>
 			</plugin>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.1</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<artifactSet>
+								<includes>
+									<include>org.codelibs:elasticsearch-util</include>
+									<include>com.orangesignal:orangesignal-csv</include>
+									<include>org.apache.poi:poi</include>
+									<include>org.apache.poi:poi-ooxml</include>
+									<include>org.apache.poi:poi-ooxml-schemas</include>
+									<include>org.apache.xmlbeans:xmlbeans</include>
+									<include>dom4j:dom4j</include>
+									<include>commons-codec:commons-codec</include>
+								</includes>
+							</artifactSet>
+							<relocations>
+								<relocation>
+									<pattern>org.codelibs.elasticsearch.util</pattern>
+									<shadedPattern>org.codelibs.elasticsearch.df.util</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>com.orangesignal</pattern>
+									<shadedPattern>org.codelibs.elasticsearch.df.orangesignal</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.poi</pattern>
+									<shadedPattern>org.codelibs.elasticsearch.df.poi</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.commons.codec</pattern>
+									<shadedPattern>org.codelibs.elasticsearch.df.codec</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.xmlbeans</pattern>
+									<shadedPattern>org.codelibs.elasticsearch.df.xmlbeans</shadedPattern>
+								</relocation>
+							</relocations>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>2.6</version>
 				<configuration>
@@ -82,51 +130,6 @@
 						<goals>
 							<goal>single</goal>
 						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>2.1</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-						<configuration>
-							<artifactSet>
-								<includes>
-									<include>org.codelibs:elasticsearch-util</include>
-									<include>jp.sf.orangesignal:orangesignal-csv</include>
-									<include>org.apache.poi:poi</include>
-									<include>org.apache.poi:poi-ooxml</include>
-									<include>org.apache.poi:poi-ooxml-schemas</include>
-									<include>org.apache.xmlbeans:xmlbeans</include>
-									<include>dom4j:dom4j</include>
-									<include>commons-codec:commons-codec</include>
-								</includes>
-							</artifactSet>
-							<relocations>
-								<relocation>
-									<pattern>org.codelibs.elasticsearch.util</pattern>
-									<shadedPattern>org.codelibs.elasticsearch.df.util</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>jp.sf.orangesignal.csv</pattern>
-									<shadedPattern>org.codelibs.elasticsearch.df.csv</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.poi</pattern>
-									<shadedPattern>org.codelibs.elasticsearch.df.poi</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.commons.codec</pattern>
-									<shadedPattern>org.codelibs.elasticsearch.df.codec</shadedPattern>
-								</relocation>
-							</relocations>
-						</configuration>
 					</execution>
 				</executions>
 			</plugin>
@@ -160,14 +163,9 @@
 			<version>${poi.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.xmlbeans</groupId>
-			<artifactId>xmlbeans</artifactId>
-			<version>${xmlbeans.version}</version>
-		</dependency>
-		<dependency>
 			<groupId>org.codelibs</groupId>
 			<artifactId>elasticsearch-cluster-runner</artifactId>
-			<version>2.1.0.0-SNAPSHOT</version>
+			<version>2.1.0.0</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
@@ -48,8 +47,7 @@ public class DataFormatPluginTest extends TestCase {
                 settingsBuilder.put("plugin.types", "org.codelibs.elasticsearch.df.DataFormatPlugin");
                 settingsBuilder.put("index.unassigned.node_left.delayed_timeout","0");
             }
-        }).build(newConfigs().clusterName(clusterName).numOfNode(1)
-                .clusterName(UUID.randomUUID().toString()));
+        }).build(newConfigs().clusterName(clusterName).numOfNode(1));
 
         // wait for yellow status
         runner.ensureYellow();
