@@ -10,7 +10,8 @@ The supported formats are CSV, Excel and JSON(Bulk).
 
 | Version   | Tested on ES  |
 |:---------:|:-------------:|
-| master    | 1.7.x         |
+| master    | 2.1.x         |
+| 2.1.0     | 2.1.0         |
 | 1.6.0     | 1.6.0         |
 | 1.5.0     | 1.5.0         |
 | 1.4.1     | 1.4.2         |
@@ -25,7 +26,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-dataformat/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-dataformat/1.6.0
+    $ $ES_HOME/bin/plugin install org.codelibs/elasticsearch-dataformat/2.1.0
 
 ## Supported Output Formats
 
