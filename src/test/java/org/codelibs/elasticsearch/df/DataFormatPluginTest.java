@@ -22,6 +22,8 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.node.Node;
 
+import com.google.common.base.Charsets;
+
 import junit.framework.TestCase;
 
 public class DataFormatPluginTest extends TestCase {
@@ -116,7 +118,7 @@ public class DataFormatPluginTest extends TestCase {
             assertEquals("true", contentAsMap.get("acknowledged").toString());
             assertEquals(csvTempFile.getName(),
                     new File(contentAsMap.get("file").toString()).getName());
-            final List<String> lines = Files.readAllLines(csvTempFile.toPath());
+            final List<String> lines = Files.readAllLines(csvTempFile.toPath(), Charsets.UTF_8);
             assertEquals(1001, lines.size());
             final String line = lines.get(0);
             assertTrue(line.contains("\"aaa\""));
@@ -156,7 +158,7 @@ public class DataFormatPluginTest extends TestCase {
             assertEquals(jsonTempFile.getName(),
                     new File(contentAsMap.get("file").toString()).getName());
             final List<String> lines = Files
-                    .readAllLines(jsonTempFile.toPath());
+                    .readAllLines(jsonTempFile.toPath(), Charsets.UTF_8);
             assertEquals(2000, lines.size());
             assertTrue(lines.get(0).startsWith(
                     "{\"index\":{\"_index\":\"dataset\",\"_type\":\"item\","));
