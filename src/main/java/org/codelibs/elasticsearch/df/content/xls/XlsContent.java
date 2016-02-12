@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -24,6 +26,8 @@ import org.codelibs.elasticsearch.df.util.MapUtils;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.codelibs.elasticsearch.df.util.StringUtils;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.SpecialPermission;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -114,19 +118,32 @@ public class XlsContent extends DataContent {
             this.outputFile = outputFile;
             this.listener = listener;
 
-            workbook = getWorkbook(isExcel2007);
-            sheet = workbook.createSheet();
-
-        }
-
-        private Workbook getWorkbook(final boolean isExcel2007) {
             if (isExcel2007) {
-                return new SXSSFWorkbook(-1); // turn off auto-flushing and accumulate all rows in memory
+                final SecurityManager sm = System.getSecurityManager();
+                if (sm != null) {
+                    sm.checkPermission(new SpecialPermission());
+                }
+                workbook = AccessController
+                        .doPrivileged(new PrivilegedAction<Workbook>() {
+                            @Override
+                            public Workbook run() {
+                                return new SXSSFWorkbook(-1); // turn off auto-flushing and accumulate all rows in memory
+                            }
+                        });
+                sheet = AccessController
+                        .doPrivileged(new PrivilegedAction<Sheet>() {
+                            @Override
+                            public Sheet run() {
+                                return workbook.createSheet();
+                            }
+                        });
             } else {
-                return new HSSFWorkbook();
+                workbook = new HSSFWorkbook();
+                sheet = workbook.createSheet();
             }
         }
 
+ 
         private void flushSheet(final int currentCount, final Sheet sheet)
                 throws IOException {
             if (sheet instanceof SXSSFSheet) {
@@ -209,22 +226,27 @@ public class XlsContent extends DataContent {
                 }
 
                 if (size == 0 || scrollId == null) {
-                    OutputStream stream = null;
-                    try {
-                        stream = new BufferedOutputStream(new FileOutputStream(
-                                outputFile));
-                        workbook.write(stream);
+                    try (OutputStream stream = new BufferedOutputStream(
+                            new FileOutputStream(outputFile))) {
+                        final SecurityManager sm = System.getSecurityManager();
+                        if (sm != null) {
+                            sm.checkPermission(new SpecialPermission());
+                        }
+                        AccessController
+                                .doPrivileged(new PrivilegedAction<Void>() {
+                                    @Override
+                                    public Void run() {
+                                        try {
+                                            workbook.write(stream);
+                                        } catch (IOException e) {
+                                            throw new ElasticsearchException(e);
+                                        }
+                                        return null;
+                                    }
+                                });
 
                         stream.flush();
                     } finally {
-                        if (stream != null) {
-                            try {
-                                stream.close();
-                            } catch (final IOException e) {
-                                // ignore
-                            }
-                        }
-
                         disposeWorkbook(workbook);
                     }
                     // end

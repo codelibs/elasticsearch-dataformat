@@ -1,7 +1,10 @@
 package org.codelibs.elasticsearch.df.util;
 
 import java.lang.reflect.Field;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
+import org.elasticsearch.SpecialPermission;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.rest.RestChannel;
@@ -22,7 +25,17 @@ public final class NettyUtils {
             if (channelField == null) {
                 channelField = channel.getClass().getDeclaredField(
                         CHANNEL_FIELD_NAME);
-                channelField.setAccessible(true);
+                final SecurityManager sm = System.getSecurityManager();
+                if (sm != null) {
+                    sm.checkPermission(new SpecialPermission());
+                }
+                AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                    @Override
+                    public Void run() {
+                        channelField.setAccessible(true);
+                        return null;
+                    }
+                });
             }
             return (Channel) channelField.get(channel);
         } catch (final Exception e) {
