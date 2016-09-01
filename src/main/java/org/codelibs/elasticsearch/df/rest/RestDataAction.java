@@ -13,12 +13,11 @@ import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.Map;
 
-import org.codelibs.elasticsearch.df.DfContentException;
-import org.codelibs.elasticsearch.df.DfSystemException;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -34,7 +33,6 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
-import org.elasticsearch.http.netty.NettyHttpChannel;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.QueryStringQueryBuilder;
 import org.elasticsearch.rest.BaseRestHandler;
@@ -185,7 +183,8 @@ public class RestDataAction extends BaseRestHandler {
     private void writeResponse(final RestRequest request,
             final RestChannel channel, final ContentType contentType,
             final File outputFile) {
-        if (channel instanceof NettyHttpChannel) {
+        final Channel nettyChannel = NettyUtils.getChannel(channel);
+        if (nettyChannel != null) {
             final DefaultHttpResponse nettyResponse = new DefaultHttpResponse(
                     HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             nettyResponse.headers().set(HttpHeaders.Names.CONTENT_TYPE,
@@ -199,7 +198,6 @@ public class RestDataAction extends BaseRestHandler {
 
             FileChannel fileChannel = null;
             try (FileInputStream fis = new FileInputStream(outputFile)){
-                ;
                 fileChannel = fis.getChannel();
 
                 final MappedByteBuffer buffer = fileChannel.map(
@@ -208,10 +206,9 @@ public class RestDataAction extends BaseRestHandler {
                         .wrappedBuffer(buffer);
                 nettyResponse.setContent(channelBuffer);
 
-                final Channel nettyChannel = NettyUtils.getChannel(channel);
                 nettyChannel.write(nettyResponse);
             } catch (final Exception e) {
-                throw new DfContentException("Failed to render the content.", e);
+                throw new ElasticsearchException("Failed to render the content.", e);
             } finally {
                 if (fileChannel != null) {
                     try {
@@ -222,7 +219,7 @@ public class RestDataAction extends BaseRestHandler {
                 }
             }
         } else {
-            throw new DfContentException("The channel is not NettyHttpChannel.");
+            throw new ElasticsearchException("The channel is not NettyHttpChannel.");
         }
     }
 
@@ -411,7 +408,7 @@ public class RestDataAction extends BaseRestHandler {
                 outputFile = new File(request.param("file"));
                 final File parentFile = outputFile.getParentFile();
                 if (parentFile != null && !parentFile.isDirectory()) {
-                    throw new DfSystemException("Cannot create/access "
+                    throw new ElasticsearchException("Cannot create/access "
                             + outputFile.getAbsolutePath());
                 }
             }
@@ -510,7 +507,7 @@ public class RestDataAction extends BaseRestHandler {
             builder.endObject();
             channel.sendResponse(new BytesRestResponse(OK, builder));
         } catch (final IOException e) {
-            throw new DfSystemException("Failed to create a resposne.", e);
+            throw new ElasticsearchException("Failed to create a resposne.", e);
         }
     }
 }

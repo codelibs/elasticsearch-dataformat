@@ -7,10 +7,10 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
-import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -50,7 +50,7 @@ public class JsonContent extends DataContent {
                     outputFile, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
-            listener.onFailure(new DfContentException("Failed to write data.",
+            listener.onFailure(new ElasticsearchException("Failed to write data.",
                     e));
         }
     }
@@ -72,7 +72,7 @@ public class JsonContent extends DataContent {
                 writer = new BufferedWriter(new OutputStreamWriter(
                         new FileOutputStream(outputFile), "UTF-8"));
             } catch (final Exception e) {
-                throw new DfContentException("Could not open "
+                throw new ElasticsearchException("Could not open "
                         + outputFile.getAbsolutePath(), e);
             }
         }
@@ -80,7 +80,7 @@ public class JsonContent extends DataContent {
         @Override
         public void onResponse(final SearchResponse response) {
             if (!isConnected()) {
-                onFailure(new DfContentException("Disconnected."));
+                onFailure(new ElasticsearchException("Disconnected."));
                 return;
             }
 
@@ -140,7 +140,7 @@ public class JsonContent extends DataContent {
             } catch (final Exception e1) {
                 // ignore
             }
-            listener.onFailure(new DfContentException("Failed to write data.",
+            listener.onFailure(new ElasticsearchException("Failed to write data.",
                     e));
         }
 
@@ -149,7 +149,7 @@ public class JsonContent extends DataContent {
                 try {
                     writer.close();
                 } catch (final IOException e) {
-                    throw new DfContentException("Could not close "
+                    throw new ElasticsearchException("Could not close "
                             + outputFile.getAbsolutePath(), e);
                 }
             }

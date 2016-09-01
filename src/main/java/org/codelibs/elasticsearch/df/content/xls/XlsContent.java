@@ -20,7 +20,6 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtils;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
@@ -97,7 +96,7 @@ public class XlsContent extends DataContent {
                     outputFile, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
-            listener.onFailure(new DfContentException("Failed to write data.",
+            listener.onFailure(new ElasticsearchException("Failed to write data.",
                     e));
         }
     }
@@ -162,7 +161,7 @@ public class XlsContent extends DataContent {
         @Override
         public void onResponse(final SearchResponse response) {
             if (!isConnected()) {
-                onFailure(new DfContentException("Disconnected."));
+                onFailure(new ElasticsearchException("Disconnected."));
                 return;
             }
 
@@ -267,7 +266,7 @@ public class XlsContent extends DataContent {
 
         @Override
         public void onFailure(final Throwable e) {
-            listener.onFailure(new DfContentException("Failed to write data.",
+            listener.onFailure(new ElasticsearchException("Failed to write data.",
                     e));
         }
 

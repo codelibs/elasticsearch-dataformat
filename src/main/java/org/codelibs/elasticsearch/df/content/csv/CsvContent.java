@@ -13,12 +13,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.codelibs.elasticsearch.df.DfContentException;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtils;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.codelibs.elasticsearch.df.util.StringUtils;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -101,7 +101,7 @@ public class CsvContent extends DataContent {
                     outputFile, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
-            listener.onFailure(new DfContentException("Failed to write data.",
+            listener.onFailure(new ElasticsearchException("Failed to write data.",
                     e));
         }
     }
@@ -125,7 +125,7 @@ public class CsvContent extends DataContent {
                                 new FileOutputStream(outputFile), charsetName)),
                         csvConfig);
             } catch (final Exception e) {
-                throw new DfContentException("Could not open "
+                throw new ElasticsearchException("Could not open "
                         + outputFile.getAbsolutePath(), e);
             }
         }
@@ -133,7 +133,7 @@ public class CsvContent extends DataContent {
         @Override
         public void onResponse(final SearchResponse response) {
             if (!isConnected()) {
-                onFailure(new DfContentException("Disconnected."));
+                onFailure(new ElasticsearchException("Disconnected."));
                 return;
             }
 
@@ -206,7 +206,7 @@ public class CsvContent extends DataContent {
             } catch (final Exception e1) {
                 // ignore
             }
-            listener.onFailure(new DfContentException("Failed to write data.",
+            listener.onFailure(new ElasticsearchException("Failed to write data.",
                     e));
         }
 
@@ -215,7 +215,7 @@ public class CsvContent extends DataContent {
                 try {
                     csvWriter.close();
                 } catch (final IOException e) {
-                    throw new DfContentException("Could not close "
+                    throw new ElasticsearchException("Could not close "
                             + outputFile.getAbsolutePath(), e);
                 }
             }

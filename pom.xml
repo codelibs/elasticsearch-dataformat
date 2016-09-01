@@ -31,7 +31,7 @@
 		<elasticsearch.plugin.classname>org.codelibs.elasticsearch.df.DataFormatPlugin</elasticsearch.plugin.classname>
 		<maven.compiler.source>1.7</maven.compiler.source>
 		<maven.compiler.target>1.7</maven.compiler.target>
-		<poi.version>3.12</poi.version>
+		<poi.version>3.14</poi.version>
 	</properties>
 	<build>
 		<plugins>

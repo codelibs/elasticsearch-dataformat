@@ -19,6 +19,7 @@ import org.codelibs.elasticsearch.runner.net.Curl;
 import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.node.Node;
 
@@ -69,7 +70,7 @@ public class DataFormatPluginTest extends TestCase {
         final String type = "item";
 
         // create an index
-        runner.createIndex(index, null);
+        runner.createIndex(index, (Settings) null);
 
         if (!runner.indexExists(index)) {
             fail();
