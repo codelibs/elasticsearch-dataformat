@@ -96,10 +96,11 @@ public class JsonContent extends DataContent {
 
             final int size = hits.getHits().length;
             currentCount += size;
-            logger.info("scrollId: " + scrollId + ", totalHits: "
-                    + hits.totalHits() + ", hits: " + size + ", current: "
-                    + currentCount);
-
+            if (logger.isDebugEnabled()) {
+                logger.debug("scrollId: " + scrollId + ", totalHits: "
+                        + hits.totalHits() + ", hits: " + size + ", current: "
+                        + currentCount);
+            }
             try {
                 for (final SearchHit hit : hits) {
                     final String index = bulkIndex == null ? hit.index()

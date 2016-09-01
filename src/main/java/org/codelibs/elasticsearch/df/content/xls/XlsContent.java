@@ -177,10 +177,11 @@ public class XlsContent extends DataContent {
                 final SearchHits hits = response.getHits();
 
                 final int size = hits.getHits().length;
-                logger.info("scrollId: " + scrollId + ", totalHits: "
-                        + hits.totalHits() + ", hits: " + size + ", current: "
-                        + (currentCount + size));
-
+                if (logger.isDebugEnabled()) {
+                    logger.debug("scrollId: " + scrollId + ", totalHits: "
+                            + hits.totalHits() + ", hits: " + size
+                            + ", current: " + (currentCount + size));
+                }
                 for (final SearchHit hit : hits) {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
                     final Map<String, Object> dataMap = new HashMap<String, Object>();
