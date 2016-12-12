@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.codec.Charsets;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -17,13 +18,12 @@ import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner;
 import org.codelibs.elasticsearch.runner.net.Curl;
 import org.codelibs.elasticsearch.runner.net.CurlResponse;
+import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.node.Node;
-
-import com.google.common.base.Charsets;
 
 import junit.framework.TestCase;
 
@@ -44,13 +44,10 @@ public class DataFormatPluginTest extends TestCase {
             public void build(final int number, final Builder settingsBuilder) {
                 settingsBuilder.put("http.cors.enabled", true);
                 settingsBuilder.put("http.cors.allow-origin", "*");
-                settingsBuilder.put("index.number_of_shards", 3);
-                settingsBuilder.put("index.number_of_replicas", 0);
                 settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
-                settingsBuilder.put("plugin.types", "org.codelibs.elasticsearch.df.DataFormatPlugin");
-                settingsBuilder.put("index.unassigned.node_left.delayed_timeout","0");
             }
-        }).build(newConfigs().clusterName(clusterName).numOfNode(1));
+        }).build(newConfigs().clusterName(clusterName).numOfNode(1)
+            .pluginTypes("org.codelibs.elasticsearch.df.DataFormatPlugin"));
 
         // wait for yellow status
         runner.ensureYellow();
@@ -89,7 +86,7 @@ public class DataFormatPluginTest extends TestCase {
                                     + ", \"ccc\":\"2012-01-01:00:00.000Z\", \"eee\":{\"fff\":\"TEST "
                                     + i + "\", \"ggg\":" + i
                                     + ", \"hhh\":\"2013-01-01:00:00.000Z\"}}");
-            assertTrue(indexResponse1.isCreated());
+            assertEquals(DocWriteResponse.Result.CREATED, indexResponse1.getResult());
         }
         runner.refresh();
 

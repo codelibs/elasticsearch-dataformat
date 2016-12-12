@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
+import io.netty.channel.Channel;
+import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
@@ -15,16 +17,14 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.jboss.netty.channel.Channel;
 
 public class JsonContent extends DataContent {
-    private static final ESLogger logger = Loggers.getLogger(JsonContent.class);
+    private static final Logger logger = Loggers.getLogger(JsonContent.class);
 
     private final Channel nettyChannel;
 
@@ -34,7 +34,7 @@ public class JsonContent extends DataContent {
 
     public JsonContent(final Client client, final RestRequest request,
             final RestChannel channel, final SearchType searchType) {
-        super(client, request, searchType);
+        super(client, request);
 
         nettyChannel = NettyUtils.getChannel(channel);
 
@@ -85,15 +85,7 @@ public class JsonContent extends DataContent {
             }
 
             final String scrollId = response.getScrollId();
-            if (isFirstScan()) {
-                client.prepareSearchScroll(scrollId)
-                        .setScroll(RequestUtil.getScroll(request))
-                        .execute(this);
-                return;
-            }
-
             final SearchHits hits = response.getHits();
-
             final int size = hits.getHits().length;
             currentCount += size;
             if (logger.isDebugEnabled()) {
@@ -131,11 +123,11 @@ public class JsonContent extends DataContent {
         }
 
         private boolean isConnected() {
-            return nettyChannel != null && nettyChannel.isConnected();
+            return nettyChannel != null && nettyChannel.isOpen();
         }
 
         @Override
-        public void onFailure(final Throwable e) {
+        public void onFailure(final Exception e) {
             try {
                 close();
             } catch (final Exception e1) {

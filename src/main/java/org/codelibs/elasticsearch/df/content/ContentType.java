@@ -18,8 +18,8 @@ public enum ContentType {
         @Override
         public DataContent dataContent(final Client client,
                 final RestRequest request, final RestChannel channel,
-                final SearchType searchType) {
-            return new CsvContent(client, request, channel, searchType);
+                final SearchType searchType, final String[] fields) {
+            return new CsvContent(client, request, channel, fields);
         }
 
         @Override
@@ -44,8 +44,8 @@ public enum ContentType {
         @Override
         public DataContent dataContent(final Client client,
                 final RestRequest request, final RestChannel channel,
-                final SearchType searchType) {
-            return new XlsContent(client, request, channel, searchType, false);
+                final SearchType searchType, final String[] fields) {
+            return new XlsContent(client, request, channel, false, fields);
         }
 
         @Override
@@ -70,7 +70,7 @@ public enum ContentType {
         @Override
         public DataContent dataContent(final Client client,
                 final RestRequest request, final RestChannel channel,
-                final SearchType searchType) {
+                final SearchType searchType, final String[] fields) {
             return new JsonContent(client, request, channel, searchType);
         }
 
@@ -96,8 +96,8 @@ public enum ContentType {
         @Override
         public DataContent dataContent(final Client client,
                 final RestRequest request, final RestChannel channel,
-                final SearchType searchType) {
-            return new XlsContent(client, request, channel, searchType, true);
+                final SearchType searchType, final String[] fields) {
+            return new XlsContent(client, request, channel, true, fields);
         }
 
         @Override
@@ -129,5 +129,5 @@ public enum ContentType {
     public abstract String fileName(RestRequest request);
 
     public abstract DataContent dataContent(Client client, RestRequest request,
-            RestChannel channel, SearchType searchType);
+            RestChannel channel, SearchType searchType, String[] fields);
 }
