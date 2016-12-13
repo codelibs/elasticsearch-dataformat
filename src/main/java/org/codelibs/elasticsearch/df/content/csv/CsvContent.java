@@ -14,10 +14,12 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.logging.log4j.Logger;
+import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtils;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
+import org.codelibs.elasticsearch.df.util.StringUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
@@ -45,11 +47,8 @@ public class CsvContent extends DataContent {
 
     private boolean modifiableFieldSet;
 
-    private final Channel nettyChannel;
-
-    public CsvContent(final Client client, final RestRequest request,
-            final RestChannel channel, final String[] fields) {
-        super(client, request);
+    public CsvContent(final Client client, final RestRequest request, final ContentType contentType) {
+        super(client, request, contentType);
         csvConfig = new CsvConfig(
                 request.param("csv.separator", ",").charAt(0), request.param(
                         "csv.quote", "\"").charAt(0), request.param(
@@ -67,6 +66,8 @@ public class CsvContent extends DataContent {
         appnedHeader = request.paramAsBoolean("append.header", true);
         charsetName = request.param("csv.encoding", "UTF-8");
 
+        final String[] fields = request.paramAsStringArray("fl",
+            StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
             modifiableFieldSet = true;
@@ -79,22 +80,20 @@ public class CsvContent extends DataContent {
             modifiableFieldSet = false;
         }
 
-        nettyChannel = NettyUtils.getChannel(channel);
-
         if (logger.isDebugEnabled()) {
             logger.debug("CsvConfig: " + csvConfig + ", appnedHeader: "
                     + appnedHeader + ", charsetName: " + charsetName
-                    + ", headerSet: " + headerSet + ", nettyChannel: "
-                    + nettyChannel);
+                    + ", headerSet: " + headerSet);
         }
     }
 
     @Override
-    public void write(final File outputFile, final SearchResponse response,
+    public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
             final ActionListener<Void> listener) {
         try {
+            final Channel nettyChannel = NettyUtils.getChannel(channel);
             final OnLoadListener onLoadListener = new OnLoadListener(
-                    outputFile, listener);
+                    outputFile, nettyChannel, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
             listener.onFailure(new ElasticsearchException("Failed to write data.",
@@ -109,12 +108,15 @@ public class CsvContent extends DataContent {
 
         protected File outputFile;
 
+        protected Channel nettyChannel;
+
         private long currentCount = 0;
 
-        protected OnLoadListener(final File outputFile,
+        protected OnLoadListener(final File outputFile, final Channel nettyChannel,
                 final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
+            this.nettyChannel = nettyChannel;
             try {
                 csvWriter = new CsvWriter(
                         new BufferedWriter(new OutputStreamWriter(

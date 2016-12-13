@@ -9,13 +9,13 @@ import java.io.Writer;
 
 import io.netty.channel.Channel;
 import org.apache.logging.log4j.Logger;
+import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.rest.RestChannel;
@@ -26,28 +26,24 @@ import org.elasticsearch.search.SearchHits;
 public class JsonContent extends DataContent {
     private static final Logger logger = Loggers.getLogger(JsonContent.class);
 
-    private final Channel nettyChannel;
-
     private final String bulkIndex;
 
     private final String bulkType;
 
-    public JsonContent(final Client client, final RestRequest request,
-            final RestChannel channel, final SearchType searchType) {
-        super(client, request);
-
-        nettyChannel = NettyUtils.getChannel(channel);
+    public JsonContent(final Client client, final RestRequest request, final ContentType contentType) {
+        super(client, request, contentType);
 
         bulkIndex = request.param("bulk.index");
         bulkType = request.param("bulk.type");
     }
 
     @Override
-    public void write(final File outputFile, final SearchResponse response,
+    public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
             final ActionListener<Void> listener) {
         try {
+            final Channel nettyChannel = NettyUtils.getChannel(channel);
             final OnLoadListener onLoadListener = new OnLoadListener(
-                    outputFile, listener);
+                    outputFile, nettyChannel, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
             listener.onFailure(new ElasticsearchException("Failed to write data.",
@@ -62,12 +58,15 @@ public class JsonContent extends DataContent {
 
         protected File outputFile;
 
+        protected Channel nettyChannel;
+
         private long currentCount = 0;
 
-        protected OnLoadListener(final File outputFile,
+        protected OnLoadListener(final File outputFile, final Channel nettyChannel,
                 final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
+            this.nettyChannel = nettyChannel;
             try {
                 writer = new BufferedWriter(new OutputStreamWriter(
                         new FileOutputStream(outputFile), "UTF-8"));

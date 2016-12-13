@@ -5,6 +5,7 @@ import java.io.File;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 
 public abstract class DataContent {
@@ -13,12 +14,18 @@ public abstract class DataContent {
 
     protected Client client;
 
-    public DataContent(final Client client, final RestRequest request) {
+    protected ContentType contentType;
+
+    public DataContent(final Client client, final RestRequest request, final ContentType contentType) {
         this.client = client;
         this.request = request;
+        this.contentType = contentType;
     }
 
-    public abstract void write(File outputFile, SearchResponse response,
+    public abstract void write(File outputFile, SearchResponse response, RestChannel channel,
             ActionListener<Void> listener);
 
+    public ContentType getContentType() {
+        return contentType;
+    }
 }

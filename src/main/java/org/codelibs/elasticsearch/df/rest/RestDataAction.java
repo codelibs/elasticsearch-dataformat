@@ -101,7 +101,7 @@ public class RestDataAction extends BaseRestHandler {
                     searchSourceBuilder.parseXContent(context, searchRequestParsers.aggParsers, searchRequestParsers.suggesters, searchRequestParsers.searchExtParsers);
                 }
                 final Map<String, Object> map = SourceLookup
-                    .sourceAsMap(request.content());
+                    .sourceAsMap(restContent);
                 fromObj = map.get("from");
             } else {
                 final String source = request.param("source");
@@ -143,13 +143,19 @@ public class RestDataAction extends BaseRestHandler {
                 IndicesOptions.strictExpandOpen()));
 
             final String file = request.param("file");
-            final String[] fields = request.paramAsStringArray("fl",
-                StringUtils.EMPTY_STRINGS);
+
+            final ContentType contentType = getContentType(request);
+            if (contentType == null) {
+                final String msg = "Unknown content type:" + request.header(HttpHeaderNames.CONTENT_TYPE.toString());
+                throw new IllegalArgumentException(msg);
+            }
+
+            final DataContent dataContent = contentType.dataContent(client, request);
             return (channel) -> prepareSearch.execute(new SearchResponseListener(request, channel,
-                client, prepareSearch.request().searchType(), file, fields));
+                client, prepareSearch.request().searchType(), file, dataContent));
         } catch (final Exception e) {
-            logger.error("failed to parse search request parameters", e);
-            throw new IllegalArgumentException("failed to parse search request parameters. " + e.getMessage(), e);
+            logger.warn("failed to parse search request parameters", e);
+            throw e;
         }
     }
 
@@ -287,8 +293,7 @@ public class RestDataAction extends BaseRestHandler {
     }
 
     private void writeResponse(final RestRequest request,
-            final RestChannel channel, final ContentType contentType,
-            final File outputFile) {
+            final RestChannel channel, final File outputFile, final DataContent dataContent) {
         final Channel nettyChannel = NettyUtils.getChannel(channel);
         if (nettyChannel != null) {
 
@@ -307,12 +312,12 @@ public class RestDataAction extends BaseRestHandler {
                 final FullHttpResponse nettyResponse = new DefaultFullHttpResponse(
                     HttpVersion.HTTP_1_1, HttpResponseStatus.OK, byteBuf);
                 nettyResponse.headers().set(HttpHeaderNames.CONTENT_TYPE.toString(),
-                    contentType.contentType());
+                    dataContent.getContentType().contentType());
                 nettyResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH.toString(),
                     outputFile.length());
                 nettyResponse.headers().set(
                     "Content-Disposition",
-                    "attachment; filename=\"" + contentType.fileName(request)
+                    "attachment; filename=\"" + dataContent.getContentType().fileName(request)
                         + "\"");
 
                 final ChannelPromise promise = nettyChannel.newPromise();
@@ -349,16 +354,15 @@ public class RestDataAction extends BaseRestHandler {
 
         private SearchType searchType;
 
-        private final String[] fields;
+        private DataContent dataContent;
 
         SearchResponseListener(final RestRequest request,
-                final RestChannel channel, final Client client,
-                final SearchType searchType, final String file, final String[] fields) {
+                final RestChannel channel, final Client client, final SearchType searchType, final String file, final DataContent dataContent) {
             this.request = request;
             this.channel = channel;
             this.client = client;
             this.searchType = searchType;
-            this.fields = fields;
+            this.dataContent = dataContent;
             if (!Strings.isNullOrEmpty(file)) {
                 outputFile = new File(file);
                 final File parentFile = outputFile.getParentFile();
@@ -372,25 +376,6 @@ public class RestDataAction extends BaseRestHandler {
         @Override
         public void onResponse(final SearchResponse response) {
 
-            final ContentType contentType = getContentType(request);
-            if (contentType == null) {
-                try {
-                    final XContentBuilder builder = channel.newBuilder();
-                    builder.startObject()
-                            .field("error",
-                                    "Unknown content type:"
-                                            + request
-                                                    .header(HttpHeaders.Names.CONTENT_TYPE))
-                            .endObject();
-                    channel.sendResponse(new BytesRestResponse(
-                            RestStatus.BAD_REQUEST, builder));
-
-                } catch (final IOException e) {
-                    logger.error("Failed to send failure response", e);
-                }
-                return;
-            }
-
             try {
                 final boolean useLocalFile = outputFile != null;
                 if (outputFile == null) {
@@ -399,9 +384,7 @@ public class RestDataAction extends BaseRestHandler {
                 if (logger.isDebugEnabled()) {
                     logger.debug("outputFile: " + outputFile.getAbsolutePath());
                 }
-                final DataContent dataContent = contentType.dataContent(client,
-                        request, channel, searchType, fields);
-                dataContent.write(outputFile, response,
+                dataContent.write(outputFile, response, channel,
                         new ActionListener<Void>() {
 
                             @Override
@@ -411,8 +394,7 @@ public class RestDataAction extends BaseRestHandler {
                                         sendResponse(request,channel,
                                                 outputFile.getAbsolutePath());
                                     } else {
-                                        writeResponse(request, channel,
-                                                contentType, outputFile);
+                                        writeResponse(request, channel, outputFile, dataContent);
                                         SearchResponseListener.this
                                                 .deleteOutputFile();
                                     }

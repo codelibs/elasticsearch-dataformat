@@ -344,16 +344,6 @@ public class DataFormatPluginTest extends TestCase {
             assertTrue(lines[1].startsWith("{\"aaa\""));
         }
 
-        // Download All as JSON with Fields
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
-                .param("format", "json").param("fl", "aaa,eee.ggg").execute()) {
-            final String content = curlResponse.getContentAsString();
-            final String[] lines = content.split("\n");
-            assertEquals(2000, lines.length);
-            assertTrue(lines[0].startsWith("{\"index\"")); // TODO
-            assertTrue(lines[1].startsWith("{\"aaa\"")); // TODO
-        }
-
         final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"100\",\"to\":\"199\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
         // Download 100 docs as JSON with Query
