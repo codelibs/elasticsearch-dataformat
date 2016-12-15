@@ -24,8 +24,6 @@
 			<useTransitiveFiltering>true</useTransitiveFiltering>
 			<excludes>
 				<exclude>org.elasticsearch:elasticsearch</exclude>
-				<exclude>com.orangesignal:orangesignal-csv</exclude>
-				<exclude>commons-codec:commons-codec</exclude>
 			</excludes>
 		</dependencySet>
 	</dependencySets>
