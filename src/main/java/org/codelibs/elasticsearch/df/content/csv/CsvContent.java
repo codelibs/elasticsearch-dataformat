@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.Logger;
+import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtils;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
@@ -21,21 +23,19 @@ import org.codelibs.elasticsearch.df.util.StringUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.jboss.netty.channel.Channel;
+import io.netty.channel.Channel;
 
 import com.orangesignal.csv.CsvConfig;
 import com.orangesignal.csv.CsvWriter;
 
 public class CsvContent extends DataContent {
-    private static final ESLogger logger = Loggers.getLogger(CsvContent.class);
+    private static final Logger logger = Loggers.getLogger(CsvContent.class);
 
     private final String charsetName;
 
@@ -47,11 +47,8 @@ public class CsvContent extends DataContent {
 
     private boolean modifiableFieldSet;
 
-    private final Channel nettyChannel;
-
-    public CsvContent(final Client client, final RestRequest request,
-            final RestChannel channel, final SearchType searchType) {
-        super(client, request, searchType);
+    public CsvContent(final Client client, final RestRequest request, final ContentType contentType) {
+        super(client, request, contentType);
         csvConfig = new CsvConfig(
                 request.param("csv.separator", ",").charAt(0), request.param(
                         "csv.quote", "\"").charAt(0), request.param(
@@ -70,7 +67,7 @@ public class CsvContent extends DataContent {
         charsetName = request.param("csv.encoding", "UTF-8");
 
         final String[] fields = request.paramAsStringArray("fl",
-                StringUtils.EMPTY_STRINGS);
+            StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
             modifiableFieldSet = true;
@@ -83,22 +80,20 @@ public class CsvContent extends DataContent {
             modifiableFieldSet = false;
         }
 
-        nettyChannel = NettyUtils.getChannel(channel);
-
         if (logger.isDebugEnabled()) {
             logger.debug("CsvConfig: " + csvConfig + ", appnedHeader: "
                     + appnedHeader + ", charsetName: " + charsetName
-                    + ", headerSet: " + headerSet + ", nettyChannel: "
-                    + nettyChannel);
+                    + ", headerSet: " + headerSet);
         }
     }
 
     @Override
-    public void write(final File outputFile, final SearchResponse response,
+    public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
             final ActionListener<Void> listener) {
         try {
+            final Channel nettyChannel = NettyUtils.getChannel(channel);
             final OnLoadListener onLoadListener = new OnLoadListener(
-                    outputFile, listener);
+                    outputFile, nettyChannel, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
             listener.onFailure(new ElasticsearchException("Failed to write data.",
@@ -113,12 +108,15 @@ public class CsvContent extends DataContent {
 
         protected File outputFile;
 
+        protected Channel nettyChannel;
+
         private long currentCount = 0;
 
-        protected OnLoadListener(final File outputFile,
+        protected OnLoadListener(final File outputFile, final Channel nettyChannel,
                 final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
+            this.nettyChannel = nettyChannel;
             try {
                 csvWriter = new CsvWriter(
                         new BufferedWriter(new OutputStreamWriter(
@@ -138,15 +136,7 @@ public class CsvContent extends DataContent {
             }
 
             final String scrollId = response.getScrollId();
-            if (isFirstScan()) {
-                client.prepareSearchScroll(scrollId)
-                        .setScroll(RequestUtil.getScroll(request))
-                        .execute(this);
-                return;
-            }
-
             final SearchHits hits = response.getHits();
-
             final int size = hits.getHits().length;
             currentCount += size;
             if (logger.isDebugEnabled()) {
@@ -197,11 +187,11 @@ public class CsvContent extends DataContent {
         }
 
         private boolean isConnected() {
-            return nettyChannel != null && nettyChannel.isConnected();
+            return nettyChannel != null && nettyChannel.isOpen();
         }
 
         @Override
-        public void onFailure(final Throwable e) {
+        public void onFailure(final Exception e) {
             try {
                 close();
             } catch (final Exception e1) {

@@ -1,23 +1,18 @@
 package org.codelibs.elasticsearch.df;
 
 import org.codelibs.elasticsearch.df.rest.RestDataAction;
+import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
-import org.elasticsearch.rest.RestModule;
+import org.elasticsearch.rest.RestHandler;
 
-public class DataFormatPlugin extends Plugin {
+import java.util.Arrays;
+import java.util.List;
+
+public class DataFormatPlugin extends Plugin implements ActionPlugin {
     @Override
-    public String name() {
-        return "DataFormatPlugin";
+    public List<Class<? extends RestHandler>> getRestHandlers() {
+        return Arrays.asList(
+            RestDataAction.class
+        );
     }
-
-    @Override
-    public String description() {
-        return "This plugin provides several response formats.";
-    }
-
-    // for Rest API
-    public void onModule(final RestModule module) {
-        module.addRestAction(RestDataAction.class);
-    }
-
 }

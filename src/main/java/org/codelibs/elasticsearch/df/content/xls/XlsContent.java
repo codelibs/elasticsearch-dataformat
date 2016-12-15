@@ -13,6 +13,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import io.netty.channel.Channel;
+import org.apache.logging.log4j.Logger;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -20,6 +22,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.MapUtils;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
@@ -29,18 +32,15 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.SpecialPermission;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.jboss.netty.channel.Channel;
 
 public class XlsContent extends DataContent {
-    private static final ESLogger logger = Loggers.getLogger(XlsContent.class);
+    private static final Logger logger = Loggers.getLogger(XlsContent.class);
 
     private static final int SXSSF_FLUSH_COUNT = 1000;
 
@@ -52,18 +52,14 @@ public class XlsContent extends DataContent {
 
     private boolean modifiableFieldSet;
 
-    private final Channel nettyChannel;
-
     private final boolean isExcel2007;
 
-    public XlsContent(final Client client, final RestRequest request,
-            final RestChannel channel, final SearchType searchType,
-            final boolean isExcel2007) {
-        super(client, request, searchType);
+    public XlsContent(final Client client, final RestRequest request, final ContentType contentType, final boolean isExcel2007) {
+        super(client, request, contentType);
 
         appnedHeader = request.paramAsBoolean("append.header", true);
         final String[] fields = request.paramAsStringArray("fl",
-                StringUtils.EMPTY_STRINGS);
+            StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
             modifiableFieldSet = true;
@@ -76,24 +72,22 @@ public class XlsContent extends DataContent {
             modifiableFieldSet = false;
         }
 
-        nettyChannel = NettyUtils.getChannel(channel);
-
         this.isExcel2007 = isExcel2007;
 
         if (logger.isDebugEnabled()) {
             logger.debug("appnedHeader: " + appnedHeader + ", headerSet: "
-                    + headerSet + ", nettyChannel: " + nettyChannel
-                    + ", isExcel2007: " + isExcel2007);
+                    + headerSet + ", isExcel2007: " + isExcel2007);
         }
     }
 
     @Override
-    public void write(final File outputFile, final SearchResponse response,
+    public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
             final ActionListener<Void> listener) {
 
         try {
+            final Channel nettyChannel = NettyUtils.getChannel(channel);
             final OnLoadListener onLoadListener = new OnLoadListener(
-                    outputFile, listener);
+                    outputFile, nettyChannel, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
             listener.onFailure(new ElasticsearchException("Failed to write data.",
@@ -106,16 +100,19 @@ public class XlsContent extends DataContent {
 
         protected File outputFile;
 
+        protected Channel nettyChannel;
+
         private Workbook workbook;
 
         private Sheet sheet;
 
         private int currentCount = 0;
 
-        protected OnLoadListener(final File outputFile,
+        protected OnLoadListener(final File outputFile, final Channel nettyChannel,
                 final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
+            this.nettyChannel = nettyChannel;
 
             if (isExcel2007) {
                 final SecurityManager sm = System.getSecurityManager();
@@ -166,12 +163,6 @@ public class XlsContent extends DataContent {
             }
 
             final String scrollId = response.getScrollId();
-            if (isFirstScan()) {
-                client.prepareSearchScroll(scrollId)
-                        .setScroll(RequestUtil.getScroll(request))
-                        .execute(this);
-                return;
-            }
 
             try {
                 final SearchHits hits = response.getHits();
@@ -262,11 +253,11 @@ public class XlsContent extends DataContent {
         }
 
         private boolean isConnected() {
-            return nettyChannel != null && nettyChannel.isConnected();
+            return nettyChannel != null && nettyChannel.isOpen();
         }
 
         @Override
-        public void onFailure(final Throwable e) {
+        public void onFailure(final Exception e) {
             listener.onFailure(new ElasticsearchException("Failed to write data.",
                     e));
         }

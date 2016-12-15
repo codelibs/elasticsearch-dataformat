@@ -5,18 +5,24 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestStatus.OK;
 import static org.elasticsearch.search.suggest.SuggestBuilders.termSuggestion;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.Map;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.*;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
+import org.codelibs.elasticsearch.df.util.StringUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -24,42 +30,48 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.bytes.BytesArray;
+import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
+import org.elasticsearch.http.netty4.pipelining.HttpPipelinedRequest;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.rest.action.RestActions;
+import org.elasticsearch.search.SearchRequestParsers;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.fetch.StoredFieldsContext;
+import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
+import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.search.lookup.SourceLookup;
 import org.elasticsearch.search.sort.SortOrder;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.elasticsearch.search.suggest.SuggestBuilder;
+import org.elasticsearch.search.suggest.term.TermSuggestionBuilder;
+import org.elasticsearch.transport.netty4.Netty4Utils;
 
 public class RestDataAction extends BaseRestHandler {
 
     private static final String[] emptyStrings = new String[0];
 
+    private final SearchRequestParsers searchRequestParsers;
+
     @Inject
-    public RestDataAction(final Settings settings, final Client client,
-            final RestController restController) {
-        super(settings, restController, client);
+    public RestDataAction(final Settings settings, final RestController restController, final SearchRequestParsers searchRequestParsers) {
+        super(settings);
+
+        this.searchRequestParsers = searchRequestParsers;
 
         restController.registerHandler(GET, "/_data", this);
         restController.registerHandler(POST, "/_data", this);
@@ -70,84 +82,184 @@ public class RestDataAction extends BaseRestHandler {
 
     }
 
-    @Override
-    protected void handleRequest(final RestRequest request,
-            final RestChannel channel, final Client client) {
-
+    protected RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         SearchRequestBuilder prepareSearch;
         try {
             final String[] indices = request.paramAsStringArray("index",
-                    emptyStrings);
+                emptyStrings);
             if (logger.isDebugEnabled()) {
                 logger.debug("indices: " + Arrays.toString(indices));
             }
             prepareSearch = client.prepareSearch(indices);
             Object fromObj = request.param("from");
             // get the content, and put it in the body
-            if (request.hasContent()) {
-                prepareSearch.setSource(request.content());
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            BytesReference restContent = RestActions.hasBodyContent(request)?RestActions.getRestContent(request):null;
+            if (restContent != null && restContent.length() > 0) {
+                try (XContentParser parser = XContentFactory.xContent(restContent).createParser(restContent)) {
+                    QueryParseContext context = new QueryParseContext(searchRequestParsers.queryParsers, parser, parseFieldMatcher);
+                    searchSourceBuilder.parseXContent(context, searchRequestParsers.aggParsers, searchRequestParsers.suggesters, searchRequestParsers.searchExtParsers);
+                }
                 final Map<String, Object> map = SourceLookup
-                        .sourceAsMap(request.content());
+                    .sourceAsMap(restContent);
                 fromObj = map.get("from");
             } else {
                 final String source = request.param("source");
                 if (source != null) {
-                    prepareSearch.setSource(source);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("source: " + source);
-                    }
-                   try( XContentParser parser = XContentFactory
-                            .xContent(source).createParser(source)){
-                    final Map<String, Object> map = parser
+                    try (XContentParser parser = XContentFactory.xContent(source).createParser(source)) {
+                        QueryParseContext context = new QueryParseContext(searchRequestParsers.queryParsers, parser, parseFieldMatcher);
+                        searchSourceBuilder.parseXContent(context, searchRequestParsers.aggParsers, searchRequestParsers.suggesters, searchRequestParsers.searchExtParsers);
+
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("source: " + source);
+                        }
+                        final Map<String, Object> map = parser
                             .map();
-                    fromObj = map.get("from");}
+                        fromObj = map.get("from");
+                    }
                 }
             }
             if (fromObj == null) {
                 prepareSearch.setScroll(RequestUtil.getScroll(request));
             }
-            // add extra source based on the request parameters
-            final XContentBuilder builder = XContentFactory
-                    .contentBuilder(XContentType.JSON);
-            final SearchSourceBuilder extraSource = parseSearchSource(request,
-                    prepareSearch);
-            if (extraSource != null) {
-                prepareSearch.setExtraSource(extraSource.toXContent(builder,
-                        ToXContent.EMPTY_PARAMS));
-            }
+            // add search source based on the request parameters
+            prepareSearch.setSource(searchSourceBuilder);
+            parseSearchSource(searchSourceBuilder, request);
 
             if (request.hasParam("search_type")) {
                 prepareSearch.setSearchType(request.param("search_type"));
-            } else if (fromObj == null) {
-                prepareSearch.setSearchType("scan");
             } else {
                 prepareSearch.setSearchType("query_then_fetch");
             }
 
             final String[] types = request.paramAsStringArray("type",
-                    emptyStrings);
+                emptyStrings);
             if (types.length > 0) {
                 prepareSearch.setTypes(types);
             }
             prepareSearch.setRouting(request.param("routing"));
             prepareSearch.setPreference(request.param("preference"));
             prepareSearch.setIndicesOptions(IndicesOptions.fromRequest(request,
-                    IndicesOptions.strictExpandOpen()));
+                IndicesOptions.strictExpandOpen()));
 
-            prepareSearch.execute(new SearchResponseListener(request, channel,
-                    client, prepareSearch.request().searchType()));
-        } catch (final Exception e) {
-            logger.error("failed to parse search request parameters", e);
-            try {
-                final XContentBuilder builder = channel.newBuilder();
-                builder.startObject().field("error", e.getMessage())
-                        .endObject();
-                channel.sendResponse(new BytesRestResponse(
-                        RestStatus.BAD_REQUEST, builder));
+            final String file = request.param("file");
 
-            } catch (final IOException e1) {
-                logger.error("Failed to send failure response", e1);
+            final ContentType contentType = getContentType(request);
+            if (contentType == null) {
+                final String msg = "Unknown content type:" + request.header(HttpHeaderNames.CONTENT_TYPE.toString());
+                throw new IllegalArgumentException(msg);
             }
+
+            final DataContent dataContent = contentType.dataContent(client, request);
+            return (channel) -> prepareSearch.execute(new SearchResponseListener(request, channel,
+                client, prepareSearch.request().searchType(), file, dataContent));
+        } catch (final Exception e) {
+            logger.warn("failed to parse search request parameters", e);
+            throw e;
+        }
+    }
+
+    private static void parseSearchSource(final SearchSourceBuilder searchSourceBuilder, RestRequest request) {
+        QueryBuilder queryBuilder = RestActions.urlParamsToQueryBuilder(request);
+        if (queryBuilder != null) {
+            searchSourceBuilder.query(queryBuilder);
+        }
+
+        int from = request.paramAsInt("from", -1);
+        if (from != -1) {
+            searchSourceBuilder.from(from);
+        }
+        int size = request.paramAsInt("size", -1);
+        if (size != -1) {
+            searchSourceBuilder.size(size);
+        }
+
+        if (request.hasParam("explain")) {
+            searchSourceBuilder.explain(request.paramAsBoolean("explain", null));
+        }
+        if (request.hasParam("version")) {
+            searchSourceBuilder.version(request.paramAsBoolean("version", null));
+        }
+        if (request.hasParam("timeout")) {
+            searchSourceBuilder.timeout(request.paramAsTime("timeout", null));
+        }
+        if (request.hasParam("terminate_after")) {
+            int terminateAfter = request.paramAsInt("terminate_after",
+                SearchContext.DEFAULT_TERMINATE_AFTER);
+            if (terminateAfter < 0) {
+                throw new IllegalArgumentException("terminateAfter must be > 0");
+            } else if (terminateAfter > 0) {
+                searchSourceBuilder.terminateAfter(terminateAfter);
+            }
+        }
+
+        if (request.param("fields") != null) {
+            throw new IllegalArgumentException("The parameter [" +
+                SearchSourceBuilder.FIELDS_FIELD + "] is no longer supported, please use [" +
+                SearchSourceBuilder.STORED_FIELDS_FIELD + "] to retrieve stored fields or _source filtering " +
+                "if the field is not stored");
+        }
+
+
+        StoredFieldsContext storedFieldsContext =
+            StoredFieldsContext.fromRestRequest(SearchSourceBuilder.STORED_FIELDS_FIELD.getPreferredName(), request);
+        if (storedFieldsContext != null) {
+            searchSourceBuilder.storedFields(storedFieldsContext);
+        }
+        String sDocValueFields = request.param("docvalue_fields");
+        if (sDocValueFields == null) {
+            sDocValueFields = request.param("fielddata_fields");
+        }
+        if (sDocValueFields != null) {
+            if (Strings.hasText(sDocValueFields)) {
+                String[] sFields = Strings.splitStringByCommaToArray(sDocValueFields);
+                for (String field : sFields) {
+                    searchSourceBuilder.docValueField(field);
+                }
+            }
+        }
+        FetchSourceContext fetchSourceContext = FetchSourceContext.parseFromRestRequest(request);
+        if (fetchSourceContext != null) {
+            searchSourceBuilder.fetchSource(fetchSourceContext);
+        }
+
+        if (request.hasParam("track_scores")) {
+            searchSourceBuilder.trackScores(request.paramAsBoolean("track_scores", false));
+        }
+
+        String sSorts = request.param("sort");
+        if (sSorts != null) {
+            String[] sorts = Strings.splitStringByCommaToArray(sSorts);
+            for (String sort : sorts) {
+                int delimiter = sort.lastIndexOf(":");
+                if (delimiter != -1) {
+                    String sortField = sort.substring(0, delimiter);
+                    String reverse = sort.substring(delimiter + 1);
+                    if ("asc".equals(reverse)) {
+                        searchSourceBuilder.sort(sortField, SortOrder.ASC);
+                    } else if ("desc".equals(reverse)) {
+                        searchSourceBuilder.sort(sortField, SortOrder.DESC);
+                    }
+                } else {
+                    searchSourceBuilder.sort(sort);
+                }
+            }
+        }
+
+        String sStats = request.param("stats");
+        if (sStats != null) {
+            searchSourceBuilder.stats(Arrays.asList(Strings.splitStringByCommaToArray(sStats)));
+        }
+
+        String suggestField = request.param("suggest_field");
+        if (suggestField != null) {
+            String suggestText = request.param("suggest_text", request.param("q"));
+            int suggestSize = request.paramAsInt("suggest_size", 5);
+            String suggestMode = request.param("suggest_mode");
+            searchSourceBuilder.suggest(new SuggestBuilder().addSuggestion(suggestField,
+                termSuggestion(suggestField)
+                    .text(suggestText).size(suggestSize)
+                    .suggestMode(TermSuggestionBuilder.SuggestMode.resolve(suggestMode))));
         }
     }
 
@@ -181,33 +293,41 @@ public class RestDataAction extends BaseRestHandler {
     }
 
     private void writeResponse(final RestRequest request,
-            final RestChannel channel, final ContentType contentType,
-            final File outputFile) {
+            final RestChannel channel, final File outputFile, final DataContent dataContent) {
         final Channel nettyChannel = NettyUtils.getChannel(channel);
         if (nettyChannel != null) {
-            final DefaultHttpResponse nettyResponse = new DefaultHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            nettyResponse.headers().set(HttpHeaders.Names.CONTENT_TYPE,
-                    contentType.contentType());
-            nettyResponse.headers().set(HttpHeaders.Names.CONTENT_LENGTH,
-                    outputFile.length());
-            nettyResponse.headers().set(
-                    "Content-Disposition",
-                    "attachment; filename=\"" + contentType.fileName(request)
-                            + "\"");
 
             FileChannel fileChannel = null;
             try (FileInputStream fis = new FileInputStream(outputFile)){
-                fileChannel = fis.getChannel();
+                final ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] bytes = new byte[1024];
+                int len;
+                while((len = fis.read(bytes)) > 0) {
+                    out.write(bytes, 0, len);
+                }
 
-                final MappedByteBuffer buffer = fileChannel.map(
-                        FileChannel.MapMode.READ_ONLY, 0L, fileChannel.size());
-                final ChannelBuffer channelBuffer = ChannelBuffers
-                        .wrappedBuffer(buffer);
-                nettyResponse.setContent(channelBuffer);
+                final ByteBuf byteBuf = Netty4Utils.toByteBuf(new BytesArray(out.toByteArray()));
+                out.close();
 
-                nettyChannel.write(nettyResponse);
-            } catch (final Exception e) {
+                final FullHttpResponse nettyResponse = new DefaultFullHttpResponse(
+                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, byteBuf);
+                nettyResponse.headers().set(HttpHeaderNames.CONTENT_TYPE.toString(),
+                    dataContent.getContentType().contentType());
+                nettyResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH.toString(),
+                    outputFile.length());
+                nettyResponse.headers().set(
+                    "Content-Disposition",
+                    "attachment; filename=\"" + dataContent.getContentType().fileName(request)
+                        + "\"");
+
+                final ChannelPromise promise = nettyChannel.newPromise();
+                promise.addListener(ChannelFutureListener.CLOSE);
+                HttpPipelinedRequest httpPipelinedRequest = NettyUtils.pipelinedRequest(channel);
+                nettyChannel.writeAndFlush(httpPipelinedRequest.createHttpResponse(nettyResponse, promise));
+
+                httpPipelinedRequest.release();
+            } catch (final Throwable e) {
+                e.printStackTrace();
                 throw new ElasticsearchException("Failed to render the content.", e);
             } finally {
                 if (fileChannel != null) {
@@ -223,169 +343,6 @@ public class RestDataAction extends BaseRestHandler {
         }
     }
 
-    public static SearchSourceBuilder parseSearchSource(
-            final RestRequest request, final SearchRequestBuilder prepareSearch) {
-        SearchSourceBuilder searchSourceBuilder = null;
-        final String queryString = request.param("q");
-        if (queryString != null) {
-            final QueryStringQueryBuilder queryBuilder = QueryBuilders
-                    .queryStringQuery(queryString);
-            queryBuilder.defaultField(request.param("df"));
-            queryBuilder.analyzer(request.param("analyzer"));
-            queryBuilder.analyzeWildcard(request.paramAsBoolean(
-                    "analyze_wildcard", false));
-            queryBuilder.lowercaseExpandedTerms(request.paramAsBoolean(
-                    "lowercase_expanded_terms", true));
-            queryBuilder.lenient(request.paramAsBoolean("lenient", null));
-            final String defaultOperator = request.param("default_operator");
-            if (defaultOperator != null) {
-                if ("OR".equals(defaultOperator)) {
-                    queryBuilder
-                            .defaultOperator(QueryStringQueryBuilder.Operator.OR);
-                } else if ("AND".equals(defaultOperator)) {
-                    queryBuilder
-                            .defaultOperator(QueryStringQueryBuilder.Operator.AND);
-                } else {
-                    throw new IllegalArgumentException(
-                            "Unsupported defaultOperator [" + defaultOperator
-                                    + "], can either be [OR] or [AND]");
-                }
-            }
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            searchSourceBuilder.query(queryBuilder);
-        }
-
-        final int from = request.paramAsInt("from", -1);
-        if (from != -1) {
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            searchSourceBuilder.from(from);
-        }
-        final int size = request.paramAsInt("size", -1);
-        if (size != -1) {
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            searchSourceBuilder.size(size);
-        }
-
-        if (request.hasParam("explain")) {
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            searchSourceBuilder
-                    .explain(request.paramAsBoolean("explain", null));
-        }
-        if (request.hasParam("version")) {
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            searchSourceBuilder
-                    .version(request.paramAsBoolean("version", null));
-        }
-        if (request.hasParam("timeout")) {
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            searchSourceBuilder.timeout(request.paramAsTime("timeout", null));
-        }
-
-        final String sField = request.param("fields");
-        if (sField != null) {
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            if (!Strings.hasText(sField)) {
-                searchSourceBuilder.noFields();
-            } else {
-                final String[] sFields = Strings
-                        .splitStringByCommaToArray(sField);
-                if (sFields != null) {
-                    for (final String field : sFields) {
-                        searchSourceBuilder.field(field);
-                    }
-                }
-            }
-        }
-
-        final String sSorts = request.param("sort");
-        if (sSorts != null) {
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            final String[] sorts = Strings.splitStringByCommaToArray(sSorts);
-            for (final String sort : sorts) {
-                final int delimiter = sort.lastIndexOf(":");
-                if (delimiter != -1) {
-                    final String sortField = sort.substring(0, delimiter);
-                    final String reverse = sort.substring(delimiter + 1);
-                    if ("asc".equals(reverse)) {
-                        searchSourceBuilder.sort(sortField, SortOrder.ASC);
-                    } else if ("desc".equals(reverse)) {
-                        searchSourceBuilder.sort(sortField, SortOrder.DESC);
-                    }
-                } else {
-                    searchSourceBuilder.sort(sort);
-                }
-            }
-        }
-
-        final String sIndicesBoost = request.param("indices_boost");
-        if (sIndicesBoost != null) {
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            final String[] indicesBoost = Strings
-                    .splitStringByCommaToArray(sIndicesBoost);
-            for (final String indexBoost : indicesBoost) {
-                final int divisor = indexBoost.indexOf(',');
-                if (divisor == -1) {
-                    throw new IllegalArgumentException(
-                            "Illegal index boost [" + indexBoost + "], no ','");
-                }
-                final String indexName = indexBoost.substring(0, divisor);
-                final String sBoost = indexBoost.substring(divisor + 1);
-                try {
-                    searchSourceBuilder.indexBoost(indexName,
-                            Float.parseFloat(sBoost));
-                } catch (final NumberFormatException e) {
-                    throw new IllegalArgumentException(
-                            "Illegal index boost [" + indexBoost
-                                    + "], boost not a float number");
-                }
-            }
-        }
-
-        final String sStats = request.param("stats");
-        if (sStats != null) {
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            searchSourceBuilder
-                    .stats(Strings.splitStringByCommaToArray(sStats));
-        }
-
-        final String suggestField = request.param("suggest_field");
-        if (suggestField != null) {
-            final String suggestText = request.param("suggest_text",
-                    queryString);
-            final int suggestSize = request.paramAsInt("suggest_size", 5);
-            if (searchSourceBuilder == null) {
-                searchSourceBuilder = new SearchSourceBuilder();
-            }
-            final String suggestMode = request.param("suggest_mode");
-            searchSourceBuilder.suggest().addSuggestion(
-                    termSuggestion(suggestField).field(suggestField)
-                            .text(suggestText).size(suggestSize)
-                            .suggestMode(suggestMode));
-        }
-
-        return searchSourceBuilder;
-    }
-
     class SearchResponseListener implements ActionListener<SearchResponse> {
         private final RestRequest request;
 
@@ -397,15 +354,17 @@ public class RestDataAction extends BaseRestHandler {
 
         private SearchType searchType;
 
+        private DataContent dataContent;
+
         SearchResponseListener(final RestRequest request,
-                final RestChannel channel, final Client client,
-                final SearchType searchType) {
+                final RestChannel channel, final Client client, final SearchType searchType, final String file, final DataContent dataContent) {
             this.request = request;
             this.channel = channel;
             this.client = client;
             this.searchType = searchType;
-            if (request.hasParam("file")) {
-                outputFile = new File(request.param("file"));
+            this.dataContent = dataContent;
+            if (!Strings.isNullOrEmpty(file)) {
+                outputFile = new File(file);
                 final File parentFile = outputFile.getParentFile();
                 if (parentFile != null && !parentFile.isDirectory()) {
                     throw new ElasticsearchException("Cannot create/access "
@@ -417,25 +376,6 @@ public class RestDataAction extends BaseRestHandler {
         @Override
         public void onResponse(final SearchResponse response) {
 
-            final ContentType contentType = getContentType(request);
-            if (contentType == null) {
-                try {
-                    final XContentBuilder builder = channel.newBuilder();
-                    builder.startObject()
-                            .field("error",
-                                    "Unknown content type:"
-                                            + request
-                                                    .header(HttpHeaders.Names.CONTENT_TYPE))
-                            .endObject();
-                    channel.sendResponse(new BytesRestResponse(
-                            RestStatus.BAD_REQUEST, builder));
-
-                } catch (final IOException e) {
-                    logger.error("Failed to send failure response", e);
-                }
-                return;
-            }
-
             try {
                 final boolean useLocalFile = outputFile != null;
                 if (outputFile == null) {
@@ -444,9 +384,7 @@ public class RestDataAction extends BaseRestHandler {
                 if (logger.isDebugEnabled()) {
                     logger.debug("outputFile: " + outputFile.getAbsolutePath());
                 }
-                final DataContent dataContent = contentType.dataContent(client,
-                        request, channel, searchType);
-                dataContent.write(outputFile, response,
+                dataContent.write(outputFile, response, channel,
                         new ActionListener<Void>() {
 
                             @Override
@@ -456,8 +394,7 @@ public class RestDataAction extends BaseRestHandler {
                                         sendResponse(request,channel,
                                                 outputFile.getAbsolutePath());
                                     } else {
-                                        writeResponse(request, channel,
-                                                contentType, outputFile);
+                                        writeResponse(request, channel, outputFile, dataContent);
                                         SearchResponseListener.this
                                                 .deleteOutputFile();
                                     }
@@ -467,7 +404,7 @@ public class RestDataAction extends BaseRestHandler {
                             }
 
                             @Override
-                            public void onFailure(final Throwable e) {
+                            public void onFailure(final Exception e) {
                                 SearchResponseListener.this.onFailure(e);
                             }
                         });
@@ -483,7 +420,7 @@ public class RestDataAction extends BaseRestHandler {
         }
 
         @Override
-        public void onFailure(final Throwable e) {
+        public void onFailure(final Exception e) {
             deleteOutputFile();
             try {
                 channel.sendResponse(new BytesRestResponse(channel,
