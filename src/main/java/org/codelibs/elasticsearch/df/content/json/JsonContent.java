@@ -7,10 +7,10 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
-import io.netty.channel.Channel;
 import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
+import org.codelibs.elasticsearch.df.netty.NettyHttpProvider;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.elasticsearch.ElasticsearchException;
@@ -41,9 +41,9 @@ public class JsonContent extends DataContent {
     public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
             final ActionListener<Void> listener) {
         try {
-            final Channel nettyChannel = NettyUtils.getChannel(channel);
+            final NettyHttpProvider provider = NettyUtils.getHttpProvider(channel);
             final OnLoadListener onLoadListener = new OnLoadListener(
-                    outputFile, nettyChannel, listener);
+                    outputFile, provider, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
             listener.onFailure(new ElasticsearchException("Failed to write data.",
@@ -58,15 +58,15 @@ public class JsonContent extends DataContent {
 
         protected File outputFile;
 
-        protected Channel nettyChannel;
+        protected NettyHttpProvider nettyProvider;
 
         private long currentCount = 0;
 
-        protected OnLoadListener(final File outputFile, final Channel nettyChannel,
+        protected OnLoadListener(final File outputFile, final NettyHttpProvider nettyProvider,
                 final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
-            this.nettyChannel = nettyChannel;
+            this.nettyProvider = nettyProvider;
             try {
                 writer = new BufferedWriter(new OutputStreamWriter(
                         new FileOutputStream(outputFile), "UTF-8"));
@@ -122,7 +122,7 @@ public class JsonContent extends DataContent {
         }
 
         private boolean isConnected() {
-            return nettyChannel != null && nettyChannel.isOpen();
+            return nettyProvider != null && nettyProvider.isOpenConnection();
         }
 
         @Override

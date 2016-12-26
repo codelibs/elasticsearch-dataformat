@@ -16,6 +16,7 @@ import java.util.Set;
 import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
+import org.codelibs.elasticsearch.df.netty.NettyHttpProvider;
 import org.codelibs.elasticsearch.df.util.MapUtils;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
@@ -29,7 +30,6 @@ import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import io.netty.channel.Channel;
 
 import com.orangesignal.csv.CsvConfig;
 import com.orangesignal.csv.CsvWriter;
@@ -91,9 +91,9 @@ public class CsvContent extends DataContent {
     public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
             final ActionListener<Void> listener) {
         try {
-            final Channel nettyChannel = NettyUtils.getChannel(channel);
+            final NettyHttpProvider nettyProvider = NettyUtils.getHttpProvider(channel);
             final OnLoadListener onLoadListener = new OnLoadListener(
-                    outputFile, nettyChannel, listener);
+                    outputFile, nettyProvider, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
             listener.onFailure(new ElasticsearchException("Failed to write data.",
@@ -108,15 +108,15 @@ public class CsvContent extends DataContent {
 
         protected File outputFile;
 
-        protected Channel nettyChannel;
+        protected NettyHttpProvider nettyProvider;
 
         private long currentCount = 0;
 
-        protected OnLoadListener(final File outputFile, final Channel nettyChannel,
+        protected OnLoadListener(final File outputFile, final NettyHttpProvider nettyProvider,
                 final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
-            this.nettyChannel = nettyChannel;
+            this.nettyProvider = nettyProvider;
             try {
                 csvWriter = new CsvWriter(
                         new BufferedWriter(new OutputStreamWriter(
@@ -187,7 +187,7 @@ public class CsvContent extends DataContent {
         }
 
         private boolean isConnected() {
-            return nettyChannel != null && nettyChannel.isOpen();
+            return nettyProvider.isOpenConnection();
         }
 
         @Override

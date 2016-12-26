@@ -5,24 +5,20 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestStatus.OK;
 import static org.elasticsearch.search.suggest.SuggestBuilders.termSuggestion;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
+import org.codelibs.elasticsearch.df.netty.NettyHttpProvider;
 import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
-import org.codelibs.elasticsearch.df.util.StringUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -32,7 +28,6 @@ import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -40,7 +35,6 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
-import org.elasticsearch.http.netty4.pipelining.HttpPipelinedRequest;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.rest.BaseRestHandler;
@@ -59,7 +53,6 @@ import org.elasticsearch.search.lookup.SourceLookup;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.search.suggest.SuggestBuilder;
 import org.elasticsearch.search.suggest.term.TermSuggestionBuilder;
-import org.elasticsearch.transport.netty4.Netty4Utils;
 
 public class RestDataAction extends BaseRestHandler {
 
@@ -146,7 +139,7 @@ public class RestDataAction extends BaseRestHandler {
 
             final ContentType contentType = getContentType(request);
             if (contentType == null) {
-                final String msg = "Unknown content type:" + request.header(HttpHeaderNames.CONTENT_TYPE.toString());
+                final String msg = "Unknown content type:" + request.header("Content-Type");
                 throw new IllegalArgumentException(msg);
             }
 
@@ -294,40 +287,18 @@ public class RestDataAction extends BaseRestHandler {
 
     private void writeResponse(final RestRequest request,
             final RestChannel channel, final File outputFile, final DataContent dataContent) {
-        final Channel nettyChannel = NettyUtils.getChannel(channel);
-        if (nettyChannel != null) {
-
             FileChannel fileChannel = null;
             try (FileInputStream fis = new FileInputStream(outputFile)){
-                final ByteArrayOutputStream out = new ByteArrayOutputStream();
-                byte[] bytes = new byte[1024];
-                int len;
-                while((len = fis.read(bytes)) > 0) {
-                    out.write(bytes, 0, len);
-                }
-
-                final ByteBuf byteBuf = Netty4Utils.toByteBuf(new BytesArray(out.toByteArray()));
-                out.close();
-
-                final FullHttpResponse nettyResponse = new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, byteBuf);
-                nettyResponse.headers().set(HttpHeaderNames.CONTENT_TYPE.toString(),
-                    dataContent.getContentType().contentType());
-                nettyResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH.toString(),
-                    outputFile.length());
-                nettyResponse.headers().set(
-                    "Content-Disposition",
+                final Map<String, Object> headers = new HashMap<>();
+                headers.put(HttpHeaderNames.CONTENT_TYPE.toString(), dataContent.getContentType().contentType());
+                headers.put(HttpHeaderNames.CONTENT_LENGTH.toString(), outputFile.length());
+                headers.put("Content-Disposition",
                     "attachment; filename=\"" + dataContent.getContentType().fileName(request)
                         + "\"");
 
-                final ChannelPromise promise = nettyChannel.newPromise();
-                promise.addListener(ChannelFutureListener.CLOSE);
-                HttpPipelinedRequest httpPipelinedRequest = NettyUtils.pipelinedRequest(channel);
-                nettyChannel.writeAndFlush(httpPipelinedRequest.createHttpResponse(nettyResponse, promise));
-
-                httpPipelinedRequest.release();
+                final NettyHttpProvider provider = NettyUtils.getHttpProvider(channel);
+                provider.writeResponse(headers, fis);
             } catch (final Throwable e) {
-                e.printStackTrace();
                 throw new ElasticsearchException("Failed to render the content.", e);
             } finally {
                 if (fileChannel != null) {
@@ -338,10 +309,8 @@ public class RestDataAction extends BaseRestHandler {
                     }
                 }
             }
-        } else {
-            throw new ElasticsearchException("The channel is not NettyHttpChannel.");
-        }
     }
+
 
     class SearchResponseListener implements ActionListener<SearchResponse> {
         private final RestRequest request;
