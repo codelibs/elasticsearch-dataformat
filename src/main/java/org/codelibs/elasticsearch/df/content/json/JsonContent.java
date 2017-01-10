@@ -10,8 +10,6 @@ import java.io.Writer;
 import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
-import org.codelibs.elasticsearch.df.netty.NettyHttpProvider;
-import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
@@ -41,9 +39,8 @@ public class JsonContent extends DataContent {
     public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
             final ActionListener<Void> listener) {
         try {
-            final NettyHttpProvider provider = NettyUtils.getHttpProvider(channel);
             final OnLoadListener onLoadListener = new OnLoadListener(
-                    outputFile, provider, listener);
+                    outputFile, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
             listener.onFailure(new ElasticsearchException("Failed to write data.",
@@ -58,15 +55,11 @@ public class JsonContent extends DataContent {
 
         protected File outputFile;
 
-        protected NettyHttpProvider nettyProvider;
-
         private long currentCount = 0;
 
-        protected OnLoadListener(final File outputFile, final NettyHttpProvider nettyProvider,
-                final ActionListener<Void> listener) {
+        protected OnLoadListener(final File outputFile, final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
-            this.nettyProvider = nettyProvider;
             try {
                 writer = new BufferedWriter(new OutputStreamWriter(
                         new FileOutputStream(outputFile), "UTF-8"));
@@ -78,11 +71,6 @@ public class JsonContent extends DataContent {
 
         @Override
         public void onResponse(final SearchResponse response) {
-            if (!isConnected()) {
-                onFailure(new ElasticsearchException("Disconnected."));
-                return;
-            }
-
             final String scrollId = response.getScrollId();
             final SearchHits hits = response.getHits();
             final int size = hits.getHits().length;
@@ -119,10 +107,6 @@ public class JsonContent extends DataContent {
             } catch (final Exception e) {
                 onFailure(e);
             }
-        }
-
-        private boolean isConnected() {
-            return nettyProvider != null && nettyProvider.isOpenConnection();
         }
 
         @Override

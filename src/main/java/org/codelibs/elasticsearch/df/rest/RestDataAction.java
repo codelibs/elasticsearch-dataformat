@@ -5,19 +5,15 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestStatus.OK;
 import static org.elasticsearch.search.suggest.SuggestBuilders.termSuggestion;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
-import org.codelibs.elasticsearch.df.netty.NettyHttpProvider;
-import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
@@ -60,6 +56,9 @@ public class RestDataAction extends BaseRestHandler {
 
     private final SearchRequestParsers searchRequestParsers;
 
+    private final long maxMemory;
+    private final long defaultLimit;
+
     @Inject
     public RestDataAction(final Settings settings, final RestController restController, final SearchRequestParsers searchRequestParsers) {
         super(settings);
@@ -73,6 +72,8 @@ public class RestDataAction extends BaseRestHandler {
         restController.registerHandler(GET, "/{index}/{type}/_data", this);
         restController.registerHandler(POST, "/{index}/{type}/_data", this);
 
+        this.maxMemory = Runtime.getRuntime().maxMemory();
+        this.defaultLimit =  maxMemory / 10;
     }
 
     protected RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
@@ -143,9 +144,20 @@ public class RestDataAction extends BaseRestHandler {
                 throw new IllegalArgumentException(msg);
             }
 
+            final long limitBytes;
+            String limitParamStr = request.param("limit");
+            if (Strings.isNullOrEmpty(limitParamStr)) {
+                limitBytes = defaultLimit;
+            } else {
+                if (limitParamStr.endsWith("%")) {
+                    limitParamStr = limitParamStr.substring(0, limitParamStr.length() - 1);
+                }
+                limitBytes = (long)(maxMemory * (Float.parseFloat(limitParamStr) / 100F));
+            }
+
             final DataContent dataContent = contentType.dataContent(client, request);
             return (channel) -> prepareSearch.execute(new SearchResponseListener(request, channel,
-                client, prepareSearch.request().searchType(), file, dataContent));
+                client, prepareSearch.request().searchType(), file, limitBytes, dataContent));
         } catch (final Exception e) {
             logger.warn("failed to parse search request parameters", e);
             throw e;
@@ -285,31 +297,6 @@ public class RestDataAction extends BaseRestHandler {
         return null;
     }
 
-    private void writeResponse(final RestRequest request,
-            final RestChannel channel, final File outputFile, final DataContent dataContent) {
-            FileChannel fileChannel = null;
-            try (FileInputStream fis = new FileInputStream(outputFile)){
-                final Map<String, Object> headers = new HashMap<>();
-                headers.put(HttpHeaderNames.CONTENT_TYPE.toString(), dataContent.getContentType().contentType());
-                headers.put(HttpHeaderNames.CONTENT_LENGTH.toString(), outputFile.length());
-                headers.put("Content-Disposition",
-                    "attachment; filename=\"" + dataContent.getContentType().fileName(request)
-                        + "\"");
-
-                final NettyHttpProvider provider = NettyUtils.getHttpProvider(channel);
-                provider.writeResponse(headers, fis);
-            } catch (final Throwable e) {
-                throw new ElasticsearchException("Failed to render the content.", e);
-            } finally {
-                if (fileChannel != null) {
-                    try {
-                        fileChannel.close();
-                    } catch (final IOException e) {
-                        // ignore
-                    }
-                }
-            }
-    }
 
 
     class SearchResponseListener implements ActionListener<SearchResponse> {
@@ -325,8 +312,10 @@ public class RestDataAction extends BaseRestHandler {
 
         private DataContent dataContent;
 
+        private long limit;
+
         SearchResponseListener(final RestRequest request,
-                final RestChannel channel, final Client client, final SearchType searchType, final String file, final DataContent dataContent) {
+                final RestChannel channel, final Client client, final SearchType searchType, final String file, final long limit, final DataContent dataContent) {
             this.request = request;
             this.channel = channel;
             this.client = client;
@@ -340,6 +329,7 @@ public class RestDataAction extends BaseRestHandler {
                             + outputFile.getAbsolutePath());
                 }
             }
+            this.limit = limit;
         }
 
         @Override
@@ -363,7 +353,7 @@ public class RestDataAction extends BaseRestHandler {
                                         sendResponse(request,channel,
                                                 outputFile.getAbsolutePath());
                                     } else {
-                                        writeResponse(request, channel, outputFile, dataContent);
+                                        writeResponse(request, channel, outputFile, limit, dataContent);
                                         SearchResponseListener.this
                                                 .deleteOutputFile();
                                     }
@@ -398,22 +388,43 @@ public class RestDataAction extends BaseRestHandler {
                 logger.error("Failed to send failure response", e1);
             }
         }
-    }
 
-    private void sendResponse(final RestRequest request,final RestChannel channel, final String file) {
-        try {
-            final XContentBuilder builder = JsonXContent.contentBuilder();
-            final String pretty=request.param("pretty");
-            if (pretty != null && !"false".equalsIgnoreCase(pretty)) {
-                builder.prettyPrint().lfAtEnd();
+        private void sendResponse(final RestRequest request,final RestChannel channel, final String file) {
+            try {
+                final XContentBuilder builder = JsonXContent.contentBuilder();
+                final String pretty=request.param("pretty");
+                if (pretty != null && !"false".equalsIgnoreCase(pretty)) {
+                    builder.prettyPrint().lfAtEnd();
+                }
+                builder.startObject();
+                builder.field("acknowledged", true);
+                builder.field("file", file);
+                builder.endObject();
+                channel.sendResponse(new BytesRestResponse(OK, builder));
+            } catch (final IOException e) {
+                throw new ElasticsearchException("Failed to create a resposne.", e);
             }
-            builder.startObject();
-            builder.field("acknowledged", true);
-            builder.field("file", file);
-            builder.endObject();
-            channel.sendResponse(new BytesRestResponse(OK, builder));
-        } catch (final IOException e) {
-            throw new ElasticsearchException("Failed to create a resposne.", e);
+        }
+
+        private void writeResponse(final RestRequest request, final RestChannel channel, final File outputFile,
+                                   final long limit, final DataContent dataContent) {
+            if (outputFile.length() > limit) {
+                onFailure(new ElasticsearchException("Content size is too large " + outputFile.length()));
+                return;
+            }
+
+            try (FileInputStream fis = new FileInputStream(outputFile)){
+                final ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] bytes = new byte[1024];
+                int len;
+                while((len = fis.read(bytes)) > 0) {
+                    out.write(bytes, 0, len);
+                }
+
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, dataContent.getContentType().contentType(), out.toByteArray()));
+            } catch (final Throwable e) {
+                throw new ElasticsearchException("Failed to render the content.", e);
+            }
         }
     }
 }

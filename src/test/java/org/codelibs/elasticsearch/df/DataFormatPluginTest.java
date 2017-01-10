@@ -17,6 +17,7 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner;
 import org.codelibs.elasticsearch.runner.net.Curl;
+import org.codelibs.elasticsearch.runner.net.CurlException;
 import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.index.IndexResponse;
@@ -101,6 +102,7 @@ public class DataFormatPluginTest extends TestCase {
         assertCsvDownload();
         assertJsonDownload();
         assertExcelDownload();
+        assertDownloadSizeLimit();
     }
 
     private void assertFile() throws IOException {
@@ -402,6 +404,35 @@ public class DataFormatPluginTest extends TestCase {
             assertEquals(2000, lines.length);
             assertTrue(lines[0].startsWith("{\"index\""));
             assertTrue(lines[1].startsWith("{\"aaa\""));
+        }
+    }
+
+    private void assertDownloadSizeLimit() throws IOException {
+        final Node node = runner.node();
+
+        // Default
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+            .param("format", "csv").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(1001, lines.length);
+        }
+
+        // 50%
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+            .param("format", "csv").param("limit", "50%").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(1001, lines.length);
+        }
+
+        //0%
+        try (CurlResponse curlResponse = Curl.get(node, "/dataset/item/_data")
+            .param("format", "csv").param("limit", "0").execute()) {
+            curlResponse.getContentAsString();
+            fail();
+        } catch (CurlException e) {
+            assertTrue(true);
         }
     }
 

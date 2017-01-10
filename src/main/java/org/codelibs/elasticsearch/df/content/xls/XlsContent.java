@@ -23,9 +23,7 @@ import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
-import org.codelibs.elasticsearch.df.netty.NettyHttpProvider;
 import org.codelibs.elasticsearch.df.util.MapUtils;
-import org.codelibs.elasticsearch.df.util.NettyUtils;
 import org.codelibs.elasticsearch.df.util.RequestUtil;
 import org.codelibs.elasticsearch.df.util.StringUtils;
 import org.elasticsearch.ElasticsearchException;
@@ -85,9 +83,8 @@ public class XlsContent extends DataContent {
             final ActionListener<Void> listener) {
 
         try {
-            final NettyHttpProvider provider = NettyUtils.getHttpProvider(channel);
             final OnLoadListener onLoadListener = new OnLoadListener(
-                    outputFile, provider, listener);
+                    outputFile, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
             listener.onFailure(new ElasticsearchException("Failed to write data.",
@@ -100,19 +97,15 @@ public class XlsContent extends DataContent {
 
         protected File outputFile;
 
-        protected NettyHttpProvider nettyProvider;
-
         private Workbook workbook;
 
         private Sheet sheet;
 
         private int currentCount = 0;
 
-        protected OnLoadListener(final File outputFile, final NettyHttpProvider nettyProvider,
-                final ActionListener<Void> listener) {
+        protected OnLoadListener(final File outputFile, final ActionListener<Void> listener) {
             this.outputFile = outputFile;
             this.listener = listener;
-            this.nettyProvider = nettyProvider;
 
             if (isExcel2007) {
                 final SecurityManager sm = System.getSecurityManager();
@@ -157,11 +150,6 @@ public class XlsContent extends DataContent {
 
         @Override
         public void onResponse(final SearchResponse response) {
-            if (!isConnected()) {
-                onFailure(new ElasticsearchException("Disconnected."));
-                return;
-            }
-
             final String scrollId = response.getScrollId();
 
             try {
@@ -250,10 +238,6 @@ public class XlsContent extends DataContent {
             } catch (final Exception e) {
                 onFailure(e);
             }
-        }
-
-        private boolean isConnected() {
-            return nettyProvider != null && nettyProvider.isOpenConnection();
         }
 
         @Override
