@@ -53,6 +53,7 @@ import org.elasticsearch.search.suggest.term.TermSuggestionBuilder;
 public class RestDataAction extends BaseRestHandler {
 
     private static final String[] emptyStrings = new String[0];
+    private static final float DEFAULT_LIMIT_PERCENTAGE = 10;
 
     private final SearchRequestParsers searchRequestParsers;
 
@@ -73,7 +74,7 @@ public class RestDataAction extends BaseRestHandler {
         restController.registerHandler(POST, "/{index}/{type}/_data", this);
 
         this.maxMemory = Runtime.getRuntime().maxMemory();
-        this.defaultLimit =  maxMemory / 10;
+        this.defaultLimit =  (long)(maxMemory * (DEFAULT_LIMIT_PERCENTAGE / 100F));
     }
 
     protected RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
