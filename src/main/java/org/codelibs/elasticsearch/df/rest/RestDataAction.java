@@ -19,9 +19,7 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.support.IndicesOptions;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -157,8 +155,9 @@ public class RestDataAction extends BaseRestHandler {
             }
 
             final DataContent dataContent = contentType.dataContent(client, request);
-            return (channel) -> prepareSearch.execute(new SearchResponseListener(request, channel,
-                client, prepareSearch.request().searchType(), file, limitBytes, dataContent));
+            return (channel) -> prepareSearch
+                    .execute(new SearchResponseListener(request, channel, file,
+                            limitBytes, dataContent));
         } catch (final Exception e) {
             logger.warn("failed to parse search request parameters", e);
             throw e;
@@ -307,20 +306,15 @@ public class RestDataAction extends BaseRestHandler {
 
         private File outputFile;
 
-        private Client client;
-
-        private SearchType searchType;
-
         private DataContent dataContent;
 
         private long limit;
 
         SearchResponseListener(final RestRequest request,
-                final RestChannel channel, final Client client, final SearchType searchType, final String file, final long limit, final DataContent dataContent) {
+                final RestChannel channel, final String file, final long limit,
+                final DataContent dataContent) {
             this.request = request;
             this.channel = channel;
-            this.client = client;
-            this.searchType = searchType;
             this.dataContent = dataContent;
             if (!Strings.isNullOrEmpty(file)) {
                 outputFile = new File(file);
@@ -422,7 +416,14 @@ public class RestDataAction extends BaseRestHandler {
                     out.write(bytes, 0, len);
                 }
 
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, dataContent.getContentType().contentType(), out.toByteArray()));
+                final ContentType contentType = dataContent.getContentType();
+                final BytesRestResponse response = new BytesRestResponse(
+                        RestStatus.OK, contentType.contentType(),
+                        out.toByteArray());
+                response.addHeader("Content-Disposition",
+                        "attachment; filename=\""
+                                + contentType.fileName(request) + "\"");
+                channel.sendResponse(response);
             } catch (final Throwable e) {
                 throw new ElasticsearchException("Failed to render the content.", e);
             }

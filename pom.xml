@@ -95,18 +95,6 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.codelibs.elasticsearch.module</groupId>
-			<artifactId>transport-netty3</artifactId>
-			<version>${elasticsearch.version}</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.codelibs.elasticsearch.module</groupId>
-			<artifactId>transport-netty4</artifactId>
-			<version>${elasticsearch.version}</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-api</artifactId>
 			<version>${log4j.version}</version>
