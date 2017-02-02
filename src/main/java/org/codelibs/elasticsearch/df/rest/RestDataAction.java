@@ -22,9 +22,11 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -57,12 +59,17 @@ public class RestDataAction extends BaseRestHandler {
 
     private final long maxMemory;
     private final long defaultLimit;
+    private NamedXContentRegistry xContentRegistry;
 
     @Inject
-    public RestDataAction(final Settings settings, final RestController restController, final SearchRequestParsers searchRequestParsers) {
+    public RestDataAction(final Settings settings,
+            final RestController restController,
+            final SearchRequestParsers searchRequestParsers,
+            final NamedXContentRegistry xContentRegistry) {
         super(settings);
 
         this.searchRequestParsers = searchRequestParsers;
+        this.xContentRegistry = xContentRegistry;
 
         restController.registerHandler(GET, "/_data", this);
         restController.registerHandler(POST, "/_data", this);
@@ -87,10 +94,10 @@ public class RestDataAction extends BaseRestHandler {
             Object fromObj = request.param("from");
             // get the content, and put it in the body
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            BytesReference restContent = RestActions.hasBodyContent(request)?RestActions.getRestContent(request):null;
+            BytesReference restContent = hasBodyContent(request) ? getRestContent(request) : null;
             if (restContent != null && restContent.length() > 0) {
-                try (XContentParser parser = XContentFactory.xContent(restContent).createParser(restContent)) {
-                    QueryParseContext context = new QueryParseContext(searchRequestParsers.queryParsers, parser, parseFieldMatcher);
+                try (XContentParser parser = XContentFactory.xContent(restContent).createParser(xContentRegistry, restContent)) {
+                    QueryParseContext context = new QueryParseContext(parser, parseFieldMatcher);
                     searchSourceBuilder.parseXContent(context, searchRequestParsers.aggParsers, searchRequestParsers.suggesters, searchRequestParsers.searchExtParsers);
                 }
                 final Map<String, Object> map = SourceLookup
@@ -99,8 +106,8 @@ public class RestDataAction extends BaseRestHandler {
             } else {
                 final String source = request.param("source");
                 if (source != null) {
-                    try (XContentParser parser = XContentFactory.xContent(source).createParser(source)) {
-                        QueryParseContext context = new QueryParseContext(searchRequestParsers.queryParsers, parser, parseFieldMatcher);
+                    try (XContentParser parser = XContentFactory.xContent(source).createParser(xContentRegistry, source)) {
+                        QueryParseContext context = new QueryParseContext(parser, parseFieldMatcher);
                         searchSourceBuilder.parseXContent(context, searchRequestParsers.aggParsers, searchRequestParsers.suggesters, searchRequestParsers.searchExtParsers);
 
                         if (logger.isDebugEnabled()) {
@@ -297,7 +304,23 @@ public class RestDataAction extends BaseRestHandler {
         return null;
     }
 
+    private static boolean hasBodyContent(final RestRequest request) {
+        return request.hasContent() || request.hasParam("source");
+    }
 
+    private static BytesReference getRestContent(RestRequest request) {
+        assert request != null;
+
+        BytesReference content = request.content();
+        if (!request.hasContent()) {
+            String source = request.param("source");
+            if (source != null) {
+                content = new BytesArray(source);
+            }
+        }
+
+        return content;
+    }
 
     class SearchResponseListener implements ActionListener<SearchResponse> {
         private final RestRequest request;
