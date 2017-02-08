@@ -162,6 +162,12 @@ public class RestDataAction extends BaseRestHandler {
             }
 
             final DataContent dataContent = contentType.dataContent(client, request);
+
+            /**
+             * Execute the {@link SearchRequestBuilder},
+             * use the denoted {@link ActionListener<SearchResponse>}
+             * to capture and react to the result.
+             */
             return (channel) -> prepareSearch
                     .execute(new SearchResponseListener(request, channel, file,
                             limitBytes, dataContent));

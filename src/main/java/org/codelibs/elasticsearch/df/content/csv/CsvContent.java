@@ -39,7 +39,7 @@ public class CsvContent extends DataContent {
 
     private final CsvConfig csvConfig;
 
-    private boolean appnedHeader;
+    private boolean appendHeader;
 
     private Set<String> headerSet;
 
@@ -61,7 +61,7 @@ public class CsvContent extends DataContent {
         csvConfig.setIgnoreTrailingWhitespaces(request.paramAsBoolean(
                 "csv.ignoreTrailingWhitespaces", true));
 
-        appnedHeader = request.paramAsBoolean("append.header", true);
+        appendHeader = request.paramAsBoolean("append.header", true);
         charsetName = request.param("csv.encoding", "UTF-8");
 
         final String[] fields = request.paramAsStringArray("fl",
@@ -79,8 +79,8 @@ public class CsvContent extends DataContent {
         }
 
         if (logger.isDebugEnabled()) {
-            logger.debug("CsvConfig: " + csvConfig + ", appnedHeader: "
-                    + appnedHeader + ", charsetName: " + charsetName
+            logger.debug("CsvConfig: " + csvConfig + ", appendHeader: "
+                    + appendHeader + ", charsetName: " + charsetName
                     + ", headerSet: " + headerSet);
         }
     }
@@ -142,12 +142,12 @@ public class CsvContent extends DataContent {
                             headerSet.add(key);
                         }
                     }
-                    if (appnedHeader) {
+                    if (appendHeader) {
                         final List<String> headerList = new ArrayList<String>(
                                 headerSet.size());
                         headerList.addAll(headerSet);
                         csvWriter.writeValues(headerList);
-                        appnedHeader = false;
+                        appendHeader = false;
                     }
 
                     final List<String> dataList = new ArrayList<String>(
