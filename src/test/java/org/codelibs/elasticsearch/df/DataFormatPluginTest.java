@@ -1,6 +1,5 @@
 package org.codelibs.elasticsearch.df;
 
-import junit.framework.TestCase;
 import org.apache.commons.codec.Charsets;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
@@ -17,28 +16,38 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.node.Node;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.BlockJUnit4ClassRunner;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner.newConfigs;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-public class DataFormatPluginTest extends TestCase {
+@RunWith(BlockJUnit4ClassRunner.class)
+public class DataFormatPluginTest {
 
-    private ElasticsearchClusterRunner runner;
+    private static ElasticsearchClusterRunner runner;
 
-    private String clusterName;
+    private static String clusterName;
 
-    private int docNumber = 20;
+    private static int docNumber = 20;
 
-    @Override
-    protected void setUp() {
+    @BeforeClass
+    public static void setUp() {
         clusterName = "es-dataformat-" + System.currentTimeMillis();
         // create runner instance
         runner = new ElasticsearchClusterRunner();
@@ -57,15 +66,15 @@ public class DataFormatPluginTest extends TestCase {
         runner.ensureYellow();
     }
 
-    @Override
-    protected void tearDown() throws IOException {
+    @AfterClass
+    public static void tearDown() throws IOException {
         // close runner
         runner.close();
         // delete all files
         runner.clean();
     }
 
-
+    @Test
     public void test_runCluster() throws IOException {
 
         final String index0 = "dataset0";
@@ -76,7 +85,7 @@ public class DataFormatPluginTest extends TestCase {
         runner.createIndex(index0, (Settings) null);
 
         if (!runner.indexExists(index0)) {
-            fail();
+            Assert.fail();
         }
 
         // create documents
@@ -106,12 +115,27 @@ public class DataFormatPluginTest extends TestCase {
         assertExcelDownload();
         assertJsonDownload();
         assertDownloadSizeLimit();
+        testMultiTypes();
     }
 
-//    private void testMultiTypes() {
-//        final Node node = runner.node();
-//
-//    }
+    public void testMultiTypes() throws IOException {
+        final Node node = runner.node();
+
+        File csvTempFile = createTempFile("multitypestest", ".csv");
+
+        String path = "/dataset0/item0,item1/_data";
+
+        Map<String, String> params = new HashMap<>();
+        params.put("format", "csv");
+        params.put("file", csvTempFile.getAbsolutePath());
+
+        try (CurlResponse response = sendRequest(node, path, params)) {
+            List<String> lines = Files.readAllLines(csvTempFile.toPath());
+            for (String line : lines) {
+                System.out.println(line);
+            }
+        }
+    }
 
     private File createTempFile(String prefix, String suffix) throws IOException {
         File file = Files.createTempFile(prefix, suffix).toFile();
@@ -122,7 +146,7 @@ public class DataFormatPluginTest extends TestCase {
 
     private CurlResponse sendRequest(Node node, String path, Map<String, String> params) {
         CurlRequest request = Curl.get(node, path);
-        for (final Map.Entry<String, String> entry : params) {
+        for (final Map.Entry<String, String> entry : params.entrySet()) {
             request.param(entry.getKey(), entry.getValue());
         }
         return request.execute();
@@ -132,11 +156,15 @@ public class DataFormatPluginTest extends TestCase {
         final Node node = runner.node();
 
         File csvTempFile = createTempFile("dftest", ".csv");
-        // Download All as CSV to file
+
+        String path = "/dataset0/item0/_data";
+
+        Map<String, String> params = new HashMap<>();
+        params.put("format", "csv");
+        params.put("file", csvTempFile.getAbsolutePath());
+
         // try-with-resources: java 7, ensure closing resources after try
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "csv")
-                .param("file", csvTempFile.getAbsolutePath()).execute()) {
+        try (CurlResponse curlResponse = sendRequest(node, path, params)) {
             Map<String, Object> contentAsMap = curlResponse.getContentAsMap();
             assertEquals("true", contentAsMap.get("acknowledged").toString());
             assertEquals(csvTempFile.getName(),
@@ -454,7 +482,7 @@ public class DataFormatPluginTest extends TestCase {
         try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
                 .param("format", "csv").param("limit", "0").execute()) {
             curlResponse.getContentAsString();
-            fail();
+            Assert.fail();
         } catch (CurlException e) {
             assertTrue(true);
         }
