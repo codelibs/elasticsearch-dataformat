@@ -6,7 +6,13 @@ import org.codelibs.elasticsearch.df.content.xls.XlsContent;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.rest.RestRequest;
 
+/**
+ * ContentType is a factory interface with 4 enumerated values
+ */
 public enum ContentType {
+
+    // these variables are value of this enum type ContentType
+    // they are by default public static final
     CSV(10) {
         @Override
         public String contentType() {
@@ -109,6 +115,7 @@ public enum ContentType {
 
     private int index;
 
+    // pass one argument into their values
     ContentType(final int index) {
         this.index = index;
     }
@@ -117,9 +124,17 @@ public enum ContentType {
         return index;
     }
 
+    // every enum value should implement all the abstract method in their enum type
     public abstract String contentType();
 
-    public abstract String fileName(RestRequest request);
-
+    /**
+     * Create a {@link DataContent} object associated with this {@link ContentType}
+     * to do the dump operations.
+     * @param client
+     * @param request
+     * @return
+     */
     public abstract DataContent dataContent(Client client, RestRequest request);
+
+    public abstract String fileName(RestRequest request);
 }

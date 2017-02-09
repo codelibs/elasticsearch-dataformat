@@ -25,6 +25,10 @@ public abstract class DataContent {
     public abstract void write(File outputFile, SearchResponse response, RestChannel channel,
             ActionListener<Void> listener);
 
+    public RestRequest getRequest() {
+        return request;
+    }
+
     public ContentType getContentType() {
         return contentType;
     }
