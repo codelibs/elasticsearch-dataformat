@@ -1,10 +1,8 @@
 package org.codelibs.elasticsearch.df.content.csv;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -13,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.codec.Charsets;
 import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
@@ -49,8 +48,8 @@ public class CsvContent extends DataContent {
         super(client, request, contentType);
         csvConfig = new CsvConfig(
                 request.param("csv.separator", ",").charAt(0), request.param(
-                        "csv.quote", "\"").charAt(0), request.param(
-                        "csv.escape", "\"").charAt(0));
+                "csv.quote", "\"").charAt(0), request.param(
+                "csv.escape", "\"").charAt(0));
         csvConfig.setQuoteDisabled(request.paramAsBoolean("csv.quoteDisabled",
                 false));
         csvConfig.setEscapeDisabled(request.paramAsBoolean(
@@ -65,7 +64,7 @@ public class CsvContent extends DataContent {
         charsetName = request.param("csv.encoding", "UTF-8");
 
         final String[] fields = request.paramAsStringArray("fl",
-            StringUtils.EMPTY_STRINGS);
+                StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
             modifiableFieldSet = true;
@@ -87,7 +86,7 @@ public class CsvContent extends DataContent {
 
     @Override
     public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
-            final ActionListener<Void> listener) {
+                      final ActionListener<Void> listener) {
         try {
             final OnLoadListener onLoadListener = new OnLoadListener(
                     outputFile, listener);
@@ -104,6 +103,8 @@ public class CsvContent extends DataContent {
         protected CsvWriter csvWriter;
 
         protected File outputFile;
+
+        protected String header;
 
         private long currentCount = 0;
 
@@ -142,14 +143,6 @@ public class CsvContent extends DataContent {
                             headerSet.add(key);
                         }
                     }
-                    if (appendHeader) {
-                        final List<String> headerList = new ArrayList<String>(
-                                headerSet.size());
-                        headerList.addAll(headerSet);
-                        csvWriter.writeValues(headerList);
-                        appendHeader = false;
-                    }
-
                     final List<String> dataList = new ArrayList<String>(
                             dataMap.size());
                     for (final String name : headerSet) {
@@ -163,6 +156,21 @@ public class CsvContent extends DataContent {
                     // end
                     csvWriter.flush();
                     close();
+                    if (appendHeader) {
+                        String tmp = new String();
+                        for (String field : headerSet) {
+                            tmp += "\"" + field + "\"" + ",";
+                        }
+                        header = tmp.substring(0, tmp.length() - 1);
+                        List<String> lines = Files.readAllLines(outputFile.toPath());
+                        BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath());
+                        writer.write(header);
+                        for (String line : lines) {
+                            writer.newLine();
+                            writer.write(line);
+                        }
+                        writer.close();
+                    }
                     listener.onResponse(null);
                 } else {
                     client.prepareSearchScroll(scrollId)

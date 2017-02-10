@@ -64,6 +64,8 @@ public class DataFormatPluginTest {
 
         // wait for yellow status
         runner.ensureYellow();
+
+        indexing();
     }
 
     @AfterClass
@@ -74,9 +76,7 @@ public class DataFormatPluginTest {
         runner.clean();
     }
 
-    @Test
-    public void test_runCluster() throws IOException {
-
+    private static void indexing() {
         final String index0 = "dataset0";
         final String type0 = "item0";
         final String type1 = "item1";
@@ -109,32 +109,6 @@ public class DataFormatPluginTest {
         assertEquals(docNumber, searchResponse.getHits().getTotalHits());
         searchResponse = runner.search(index0, type1, null, null, 0, 10);
         assertEquals(docNumber, searchResponse.getHits().getTotalHits());
-
-        assertFile();
-        assertCsvDownload();
-        assertExcelDownload();
-        assertJsonDownload();
-        assertDownloadSizeLimit();
-        testMultiTypes();
-    }
-
-    public void testMultiTypes() throws IOException {
-        final Node node = runner.node();
-
-        File csvTempFile = createTempFile("multitypestest", ".csv");
-
-        String path = "/dataset0/item0,item1/_data";
-
-        Map<String, String> params = new HashMap<>();
-        params.put("format", "csv");
-        params.put("file", csvTempFile.getAbsolutePath());
-
-        try (CurlResponse response = sendRequest(node, path, params)) {
-            List<String> lines = Files.readAllLines(csvTempFile.toPath());
-            for (String line : lines) {
-                System.out.println(line);
-            }
-        }
     }
 
     private File createTempFile(String prefix, String suffix) throws IOException {
@@ -152,7 +126,44 @@ public class DataFormatPluginTest {
         return request.execute();
     }
 
-    private void assertFile() throws IOException {
+    private void assertAcknowledged(CurlResponse response, File file) {
+        Map<String, Object> contentAsMap = response.getContentAsMap();
+        assertEquals("true", contentAsMap.get("acknowledged").toString());
+        assertEquals(file.getName(),
+                new File(contentAsMap.get("file").toString()).getName());
+    }
+
+    private void assertLineContains(String line, String... words) {
+        for (String word : words) {
+            assertTrue(line.contains(word));
+        }
+    }
+
+    @Test
+    public void testMultiTypes() throws IOException {
+        final Node node = runner.node();
+
+        File csvTempFile = createTempFile("multitypestest", ".csv");
+
+        String path = "/dataset0/item0,item1/_data";
+
+        Map<String, String> params = new HashMap<>();
+        params.put("format", "csv");
+        params.put("file", csvTempFile.getAbsolutePath());
+
+        try (CurlResponse response = sendRequest(node, path, params)) {
+            assertAcknowledged(response, csvTempFile);
+            final List<String> lines = Files.readAllLines(csvTempFile.toPath());
+            assertEquals(docNumber * 2 + 1, lines.size());
+            final String header = lines.get(0);
+            assertLineContains(header, "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"", "\"nnn\"");
+            final String firstLine = lines.get(1);
+            assertEquals(6, firstLine.split(",").length);
+        }
+    }
+
+    @Test
+    public void assertFile() throws IOException {
         final Node node = runner.node();
 
         File csvTempFile = createTempFile("dftest", ".csv");
@@ -165,20 +176,13 @@ public class DataFormatPluginTest {
 
         // try-with-resources: java 7, ensure closing resources after try
         try (CurlResponse curlResponse = sendRequest(node, path, params)) {
-            Map<String, Object> contentAsMap = curlResponse.getContentAsMap();
-            assertEquals("true", contentAsMap.get("acknowledged").toString());
-            assertEquals(csvTempFile.getName(),
-                    new File(contentAsMap.get("file").toString()).getName());
+            assertAcknowledged(curlResponse, csvTempFile);
+
             // Files.readAllLines ensure the closure of file in any cases.
             final List<String> lines = Files.readAllLines(csvTempFile.toPath(), Charsets.UTF_8);
             assertEquals(docNumber + 1, lines.size());
             final String line = lines.get(0);
-            assertTrue(line.contains("\"aaa\""));
-            assertTrue(line.contains("\"bbb\""));
-            assertTrue(line.contains("\"ccc\""));
-            assertTrue(line.contains("\"eee.fff\""));
-            assertTrue(line.contains("\"eee.ggg\""));
-            assertTrue(line.contains("\"eee.hhh\""));
+            assertLineContains(line, "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"");
         }
 
         File xlsTempFile = File.createTempFile("dftest", ".xls");
@@ -199,8 +203,7 @@ public class DataFormatPluginTest {
             }
         }
 
-        File jsonTempFile = File.createTempFile("dftest", ".json");
-        jsonTempFile.deleteOnExit();
+        File jsonTempFile = createTempFile("dftest", ".json");
         // Download All as JSON to file
         try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
                 .param("format", "json")
@@ -218,7 +221,8 @@ public class DataFormatPluginTest {
         }
     }
 
-    private void assertCsvDownload() throws IOException {
+    @Test
+    public void assertCsvDownload() throws IOException {
         final Node node = runner.node();
 
         // Download All as CSV
@@ -227,6 +231,7 @@ public class DataFormatPluginTest {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber + 1, lines.length);
+            System.out.println(lines[0]);
             assertTrue(lines[0].contains("\"aaa\""));
             assertTrue(lines[0].contains("\"bbb\""));
             assertTrue(lines[0].contains("\"ccc\""));
@@ -318,7 +323,8 @@ public class DataFormatPluginTest {
         }
     }
 
-    private void assertExcelDownload() throws IOException {
+    @Test
+    public void assertExcelDownload() throws IOException {
         final Node node = runner.node();
 
         // Download All as Excel
@@ -374,7 +380,8 @@ public class DataFormatPluginTest {
         }
     }
 
-    private void assertJsonDownload() throws IOException {
+    @Test
+    public void assertJsonDownload() throws IOException {
         final Node node = runner.node();
 
         // Download All as JSON
@@ -459,7 +466,8 @@ public class DataFormatPluginTest {
         }
     }
 
-    private void assertDownloadSizeLimit() throws IOException {
+    @Test
+    public void assertDownloadSizeLimit() throws IOException {
         final Node node = runner.node();
 
         // Default
