@@ -16,10 +16,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.node.Node;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
 
@@ -33,9 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner.newConfigs;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @RunWith(BlockJUnit4ClassRunner.class)
 public class DataFormatPluginTest {
@@ -44,10 +39,32 @@ public class DataFormatPluginTest {
 
     private static String clusterName;
 
-    private static int docNumber = 20;
+    private static int docNumber;
+
+    private static Node node;
+
+    private static final File csvTempFile;
+    private static final File xlsTempFile;
+    private static final File jsonTempFile;
+    private static final String path;
+    private static final String path_multitypes;
+
+    private final Map<String, String> paramsCsv = new HashMap<>();
+    private final Map<String, String> paramsXls = new HashMap<>();
+    private final Map<String, String> paramsJson = new HashMap<>();
+
+    static {
+        docNumber = 20;
+
+        csvTempFile = createTempFile("csvtest", ".csv");
+        xlsTempFile = createTempFile("xlstest", ".xls");
+        jsonTempFile = createTempFile("jsontest", ".json");
+        path = "/dataset0/item0/_data";
+        path_multitypes = "/dataset0/item0,item1/_data";
+    }
 
     @BeforeClass
-    public static void setUp() {
+    public static void setUp() throws IOException {
         clusterName = "es-dataformat-" + System.currentTimeMillis();
         // create runner instance
         runner = new ElasticsearchClusterRunner();
@@ -66,6 +83,8 @@ public class DataFormatPluginTest {
         runner.ensureYellow();
 
         indexing();
+
+        node = runner.node();
     }
 
     @AfterClass
@@ -76,154 +95,15 @@ public class DataFormatPluginTest {
         runner.clean();
     }
 
-    private static void indexing() {
-        final String index0 = "dataset0";
-        final String type0 = "item0";
-        final String type1 = "item1";
-
-        // create an index
-        runner.createIndex(index0, (Settings) null);
-
-        if (!runner.indexExists(index0)) {
-            Assert.fail();
-        }
-
-        // create documents
-        for (int i = 1; i <= docNumber; i++) {
-            final IndexResponse indexResponse0 = runner.insert(index0, type0, String.valueOf(i),
-                    "{" +
-                            "\"aaa\":\"test " + i + "\"," +
-                            "\"bbb\":" + i + "," +
-                            "\"ccc\":\"2012-01-01:00:00.000Z\"," +
-                            "\"eee\":{\"fff\":\"TEST " + i + "\", \"ggg\":" + i + ", \"hhh\":\"2013-01-01:00:00.000Z\"}" +
-                            "}");
-            final IndexResponse indexResponse1 = runner.insert(index0, type1, String.valueOf(i),
-                    "{\"nnn\":" + i + "}");
-            assertEquals(DocWriteResponse.Result.CREATED, indexResponse1.getResult());
-            assertEquals(DocWriteResponse.Result.CREATED, indexResponse0.getResult());
-        }
-        runner.refresh();
-
-        // search documents to verify
-        SearchResponse searchResponse = runner.search(index0, type0, null, null, 0, 10);
-        assertEquals(docNumber, searchResponse.getHits().getTotalHits());
-        searchResponse = runner.search(index0, type1, null, null, 0, 10);
-        assertEquals(docNumber, searchResponse.getHits().getTotalHits());
-    }
-
-    private File createTempFile(String prefix, String suffix) throws IOException {
-        File file = Files.createTempFile(prefix, suffix).toFile();
-        // request deletion of created file when jvm terminates.
-        file.deleteOnExit();
-        return file;
-    }
-
-    private CurlResponse sendRequest(Node node, String path, Map<String, String> params) {
-        CurlRequest request = Curl.get(node, path);
-        for (final Map.Entry<String, String> entry : params.entrySet()) {
-            request.param(entry.getKey(), entry.getValue());
-        }
-        return request.execute();
-    }
-
-    private void assertAcknowledged(CurlResponse response, File file) {
-        Map<String, Object> contentAsMap = response.getContentAsMap();
-        assertEquals("true", contentAsMap.get("acknowledged").toString());
-        assertEquals(file.getName(),
-                new File(contentAsMap.get("file").toString()).getName());
-    }
-
-    private void assertLineContains(String line, String... words) {
-        for (String word : words) {
-            assertTrue(line.contains(word));
-        }
+    @Before
+    public void prepareParams() {
+        paramsCsv.put("format", "csv");
+        paramsXls.put("format", "xls");
+        paramsJson.put("format", "json");
     }
 
     @Test
-    public void testMultiTypes() throws IOException {
-        final Node node = runner.node();
-
-        File csvTempFile = createTempFile("multitypestest", ".csv");
-
-        String path = "/dataset0/item0,item1/_data";
-
-        Map<String, String> params = new HashMap<>();
-        params.put("format", "csv");
-        params.put("file", csvTempFile.getAbsolutePath());
-
-        try (CurlResponse response = sendRequest(node, path, params)) {
-            assertAcknowledged(response, csvTempFile);
-            final List<String> lines = Files.readAllLines(csvTempFile.toPath());
-            assertEquals(docNumber * 2 + 1, lines.size());
-            final String header = lines.get(0);
-            assertLineContains(header, "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"", "\"nnn\"");
-            final String firstLine = lines.get(1);
-            assertEquals(6, firstLine.split(",").length);
-        }
-    }
-
-    @Test
-    public void assertFile() throws IOException {
-        final Node node = runner.node();
-
-        File csvTempFile = createTempFile("dftest", ".csv");
-
-        String path = "/dataset0/item0/_data";
-
-        Map<String, String> params = new HashMap<>();
-        params.put("format", "csv");
-        params.put("file", csvTempFile.getAbsolutePath());
-
-        // try-with-resources: java 7, ensure closing resources after try
-        try (CurlResponse curlResponse = sendRequest(node, path, params)) {
-            assertAcknowledged(curlResponse, csvTempFile);
-
-            // Files.readAllLines ensure the closure of file in any cases.
-            final List<String> lines = Files.readAllLines(csvTempFile.toPath(), Charsets.UTF_8);
-            assertEquals(docNumber + 1, lines.size());
-            final String line = lines.get(0);
-            assertLineContains(line, "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"");
-        }
-
-        File xlsTempFile = File.createTempFile("dftest", ".xls");
-        xlsTempFile.deleteOnExit();
-        // Download All as Excel to file
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "xls")
-                .param("file", xlsTempFile.getAbsolutePath()).execute()) {
-            Map<String, Object> contentAsMap = curlResponse.getContentAsMap();
-            assertEquals("true", contentAsMap.get("acknowledged").toString());
-            assertEquals(xlsTempFile.getName(),
-                    new File(contentAsMap.get("file").toString()).getName());
-            try (InputStream is = new FileInputStream(xlsTempFile)) {
-                final POIFSFileSystem fs = new POIFSFileSystem(is);
-                final HSSFWorkbook book = new HSSFWorkbook(fs);
-                final HSSFSheet sheet = book.getSheetAt(0);
-                assertEquals(docNumber, sheet.getLastRowNum());
-            }
-        }
-
-        File jsonTempFile = createTempFile("dftest", ".json");
-        // Download All as JSON to file
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "json")
-                .param("file", jsonTempFile.getAbsolutePath()).execute()) {
-            Map<String, Object> contentAsMap = curlResponse.getContentAsMap();
-            assertEquals("true", contentAsMap.get("acknowledged").toString());
-            assertEquals(jsonTempFile.getName(),
-                    new File(contentAsMap.get("file").toString()).getName());
-            final List<String> lines = Files
-                    .readAllLines(jsonTempFile.toPath(), Charsets.UTF_8);
-            assertEquals(docNumber * 2, lines.size());
-            assertTrue(lines.get(0).startsWith(
-                    "{\"index\":{\"_index\":\"dataset0\",\"_type\":\"item0\","));
-            assertTrue(lines.get(1).startsWith("{\"aaa\""));
-        }
-    }
-
-    @Test
-    public void assertCsvDownload() throws IOException {
-        final Node node = runner.node();
+    public void dumpCsv() throws IOException {
 
         // Download All as CSV
         try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
@@ -324,8 +204,21 @@ public class DataFormatPluginTest {
     }
 
     @Test
-    public void assertExcelDownload() throws IOException {
-        final Node node = runner.node();
+    public void dumpCsvWithFile() throws IOException {
+        paramsCsv.put("file", csvTempFile.getAbsolutePath());
+
+        // try-with-resources: java 7, ensure closing resources after try
+        try (CurlResponse curlResponse = sendRequest(node, path, paramsCsv)) {
+            assertAcknowledged(curlResponse, csvTempFile);
+            final List<String> lines = Files.readAllLines(csvTempFile.toPath(), Charsets.UTF_8);
+            assertEquals(docNumber + 1, lines.size());
+            final String line = lines.get(0);
+            assertLineContains(line, "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"");
+        }
+    }
+
+    @Test
+    public void dumpExcel() throws IOException {
 
         // Download All as Excel
         try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
@@ -381,8 +274,37 @@ public class DataFormatPluginTest {
     }
 
     @Test
-    public void assertJsonDownload() throws IOException {
-        final Node node = runner.node();
+    public void dumpCsvMultitypesWithFile() throws IOException {
+        paramsCsv.put("file", csvTempFile.getAbsolutePath());
+
+        try (CurlResponse response = sendRequest(node, path_multitypes, paramsCsv)) {
+            assertAcknowledged(response, csvTempFile);
+            final List<String> lines = Files.readAllLines(csvTempFile.toPath());
+            assertEquals(docNumber * 2 + 1, lines.size());
+            final String header = lines.get(0);
+            assertLineContains(header, "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"", "\"nnn\"");
+            final String firstLine = lines.get(1);
+            assertEquals(6, firstLine.split(",").length);
+        }
+    }
+
+    @Test
+    public void dumpXlsWithFile() throws IOException {
+        paramsXls.put("file", xlsTempFile.getAbsolutePath());
+
+        try (CurlResponse curlResponse = sendRequest(node, path, paramsXls)) {
+            assertAcknowledged(curlResponse, xlsTempFile);
+            try (InputStream is = new FileInputStream(xlsTempFile)) {
+                final POIFSFileSystem fs = new POIFSFileSystem(is);
+                final HSSFWorkbook book = new HSSFWorkbook(fs);
+                final HSSFSheet sheet = book.getSheetAt(0);
+                assertEquals(docNumber, sheet.getLastRowNum());
+            }
+        }
+    }
+
+    @Test
+    public void dumpJson() throws IOException {
 
         // Download All as JSON
         try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
@@ -467,8 +389,21 @@ public class DataFormatPluginTest {
     }
 
     @Test
-    public void assertDownloadSizeLimit() throws IOException {
-        final Node node = runner.node();
+    public void dumpJsonWithFile() throws IOException {
+        paramsJson.put("file", jsonTempFile.getAbsolutePath());
+
+        try (CurlResponse curlResponse = sendRequest(node, path, paramsJson)) {
+            assertAcknowledged(curlResponse, jsonTempFile);
+            final List<String> lines = Files.readAllLines(jsonTempFile.toPath(), Charsets.UTF_8);
+            assertEquals(docNumber * 2, lines.size());
+            assertTrue(lines.get(0).startsWith(
+                    "{\"index\":{\"_index\":\"dataset0\",\"_type\":\"item0\","));
+            assertTrue(lines.get(1).startsWith("{\"aaa\""));
+        }
+    }
+
+    @Test
+    public void dumpSizeLimit() throws IOException {
 
         // Default
         try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
@@ -496,4 +431,71 @@ public class DataFormatPluginTest {
         }
     }
 
+    private static void indexing() {
+        final String index0 = "dataset0";
+        final String type0 = "item0";
+        final String type1 = "item1";
+
+        // create an index
+        runner.createIndex(index0, (Settings) null);
+
+        if (!runner.indexExists(index0)) {
+            Assert.fail();
+        }
+
+        // create documents
+        for (int i = 1; i <= docNumber; i++) {
+            final IndexResponse indexResponse0 = runner.insert(index0, type0, String.valueOf(i),
+                    "{" +
+                            "\"aaa\":\"test " + i + "\"," +
+                            "\"bbb\":" + i + "," +
+                            "\"ccc\":\"2012-01-01:00:00.000Z\"," +
+                            "\"eee\":{\"fff\":\"TEST " + i + "\", \"ggg\":" + i + ", \"hhh\":\"2013-01-01:00:00.000Z\"}" +
+                            "}");
+            final IndexResponse indexResponse1 = runner.insert(index0, type1, String.valueOf(i),
+                    "{\"nnn\":" + i + "}");
+            assertEquals(DocWriteResponse.Result.CREATED, indexResponse1.getResult());
+            assertEquals(DocWriteResponse.Result.CREATED, indexResponse0.getResult());
+        }
+        runner.refresh();
+
+        // search documents to verify
+        SearchResponse searchResponse = runner.search(index0, type0, null, null, 0, 10);
+        assertEquals(docNumber, searchResponse.getHits().getTotalHits());
+        searchResponse = runner.search(index0, type1, null, null, 0, 10);
+        assertEquals(docNumber, searchResponse.getHits().getTotalHits());
+    }
+
+    private static File createTempFile(String prefix, String suffix) {
+        File file = null;
+        try {
+            file = Files.createTempFile(prefix, suffix).toFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // request deletion of created file when jvm terminates.
+        file.deleteOnExit();
+        return file;
+    }
+
+    private CurlResponse sendRequest(Node node, String path, Map<String, String> params) {
+        CurlRequest request = Curl.get(node, path);
+        for (final Map.Entry<String, String> entry : params.entrySet()) {
+            request.param(entry.getKey(), entry.getValue());
+        }
+        return request.execute();
+    }
+
+    private void assertAcknowledged(CurlResponse response, File file) {
+        Map<String, Object> contentAsMap = response.getContentAsMap();
+        assertEquals("true", contentAsMap.get("acknowledged").toString());
+        assertEquals(file.getName(),
+                new File(contentAsMap.get("file").toString()).getName());
+    }
+
+    private void assertLineContains(String line, String... words) {
+        for (String word : words) {
+            assertTrue(line.contains(word));
+        }
+    }
 }
