@@ -157,6 +157,7 @@ public class CsvContent extends DataContent {
                     csvWriter.flush();
                     close();
                     if (appendHeader) {
+                        // FIXME use CsvConfig and try-resource
                         String tmp = new String();
                         for (String field : headerSet) {
                             tmp += "\"" + field + "\"" + ",";
