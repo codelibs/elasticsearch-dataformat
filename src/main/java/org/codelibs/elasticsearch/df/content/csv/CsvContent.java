@@ -1,8 +1,14 @@
 package org.codelibs.elasticsearch.df.content.csv;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,8 +16,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import org.apache.commons.codec.Charsets;
 import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
@@ -157,20 +163,28 @@ public class CsvContent extends DataContent {
                     csvWriter.flush();
                     close();
                     if (appendHeader) {
-                        // FIXME use CsvConfig and try-resource
-                        String tmp = new String();
-                        for (String field : headerSet) {
-                            tmp += "\"" + field + "\"" + ",";
+                        boolean finished = false;
+                        final Path tempFile = Files
+                                .createTempFile("dataformat_", ".csv");
+                        try (final OutputStream out = Files
+                                .newOutputStream(tempFile);
+                                final CsvWriter writer = new CsvWriter(
+                                        new OutputStreamWriter(out,
+                                                charsetName),
+                                        csvConfig)) {
+                            writer.writeValues(headerSet.stream()
+                                    .collect(Collectors.toList()));
+                            writer.flush();
+                            Files.copy(outputFile.toPath(), out);
+                            finished = true;
+                        } finally {
+                            if (finished) {
+                                Files.copy(tempFile, outputFile.toPath(),
+                                        StandardCopyOption.REPLACE_EXISTING);
+                            } else {
+                                Files.delete(tempFile);
+                            }
                         }
-                        header = tmp.substring(0, tmp.length() - 1);
-                        List<String> lines = Files.readAllLines(outputFile.toPath());
-                        BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath());
-                        writer.write(header);
-                        for (String line : lines) {
-                            writer.newLine();
-                            writer.write(line);
-                        }
-                        writer.close();
                     }
                     listener.onResponse(null);
                 } else {
