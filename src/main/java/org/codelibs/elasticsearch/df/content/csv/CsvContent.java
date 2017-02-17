@@ -69,7 +69,7 @@ public class CsvContent extends DataContent {
         appendHeader = request.paramAsBoolean("append.header", true);
         charsetName = request.param("csv.encoding", "UTF-8");
 
-        final String[] fields = request.paramAsStringArray("fl",
+        final String[] fields = request.paramAsStringArray("header_name",
                 StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
@@ -77,7 +77,7 @@ public class CsvContent extends DataContent {
         } else {
             final Set<String> fieldSet = new LinkedHashSet<String>();
             for (final String field : fields) {
-                fieldSet.add(field);
+                fieldSet.add(field.trim());
             }
             headerSet = Collections.unmodifiableSet(fieldSet);
             modifiableFieldSet = false;
@@ -109,8 +109,6 @@ public class CsvContent extends DataContent {
         protected CsvWriter csvWriter;
 
         protected File outputFile;
-
-        protected String header;
 
         private long currentCount = 0;
 
