@@ -102,61 +102,59 @@ public class DataFormatPluginTest {
         paramsJson.put("format", "json");
     }
 
+    @After
+    public void clearParams() {
+        paramsCsv.clear();
+        paramsXls.clear();
+        paramsJson.clear();
+    }
+
     @Test
-    public void dumpCsv() throws IOException {
-
-        // Download All as CSV
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "csv").execute()) {
+    public void dumpCsvSimple() throws IOException {
+        try (CurlResponse curlResponse = createRequest(node, path, paramsCsv).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber + 1, lines.length);
-            System.out.println(lines[0]);
-            assertTrue(lines[0].contains("\"aaa\""));
-            assertTrue(lines[0].contains("\"bbb\""));
-            assertTrue(lines[0].contains("\"ccc\""));
-            assertTrue(lines[0].contains("\"eee.fff\""));
-            assertTrue(lines[0].contains("\"eee.ggg\""));
-            assertTrue(lines[0].contains("\"eee.hhh\""));
+            assertLineContains(lines[0], "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"");
         }
+    }
 
-        // Download All as CSV with Fields
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "csv").param("fl", "aaa,eee.ggg").execute()) {
-            final String content = curlResponse.getContentAsString();
-            final String[] lines = content.split("\n");
-            assertEquals(docNumber + 1, lines.length);
-            assertTrue(lines[0].contains("\"aaa\""));
-            assertFalse(lines[0].contains("\"bbb\""));
-            assertFalse(lines[0].contains("\"ccc\""));
-            assertFalse(lines[0].contains("\"eee.fff\""));
-            assertTrue(lines[0].contains("\"eee.ggg\""));
-            assertFalse(lines[0].contains("\"eee.hhh\""));
+    @Test
+    public void dumpCsvSelfdefinedHeader() throws IOException {
+        dumpCsvSelfdefinedHeader("header_name");
+        clearParams();
+        prepareParams();
+        dumpCsvSelfdefinedHeader("fl");
+    }
+
+    @Test
+    public void dumpCsvWithoutHeader() throws IOException {
+        paramsCsv.put("append.header", "false");
+        try (CurlResponse response = createRequest(node, path, paramsCsv).execute()) {
+            assertEquals(docNumber, response.getContentAsString().split("\n").length);
         }
+    }
 
-        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
+    @Test
+    public void dumpCsvWithQuery() throws IOException {
 
         // Download 10 docs as CSV with Query
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "csv").param("search_type", "query_then_fetch").body(query).execute()) {
-            final String content = curlResponse.getContentAsString();
-            final String[] lines = content.split("\n");
+        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
+        paramsCsv.put("search_type", "query_then_fetch");
+        try (CurlResponse response = createRequest(node, path, paramsCsv).body(query).execute()) {
+            String[] lines = response.getContentAsString().split("\n");
             assertEquals(11, lines.length);
-            assertTrue(lines[0].contains("\"aaa\""));
-            assertTrue(lines[0].contains("\"bbb\""));
-            assertTrue(lines[0].contains("\"ccc\""));
-            assertTrue(lines[0].contains("\"eee.fff\""));
-            assertTrue(lines[0].contains("\"eee.ggg\""));
-            assertTrue(lines[1].contains("\"1\""));
+            assertLineContains(lines[0], "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"");
+            assertLineContains(lines[1], "\"1\"");
         }
 
         // Download 10 docs as CSV
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("q", "*:*").param("format", "csv").param("from", "5")
-                .execute()) {
-            final String content = curlResponse.getContentAsString();
-            final String[] lines = content.split("\n");
-            assertEquals(11, lines.length);
+        clearParams();
+        prepareParams();
+        paramsCsv.put("q", "*:*");
+        paramsCsv.put("from", "5");
+        try (CurlResponse response = createRequest(node, path, paramsCsv).execute()) {
+            assertEquals(11, response.getContentAsString().split("\n").length);
         }
 
         // Download all the docs from the 5th as CSV
@@ -204,16 +202,31 @@ public class DataFormatPluginTest {
     }
 
     @Test
-    public void dumpCsvWithFile() throws IOException {
+    public void dumpCsvInFile() throws IOException {
         paramsCsv.put("file", csvTempFile.getAbsolutePath());
 
         // try-with-resources: java 7, ensure closing resources after try
-        try (CurlResponse curlResponse = sendRequest(node, path, paramsCsv)) {
+        try (CurlResponse curlResponse = createRequest(node, path, paramsCsv).execute()) {
             assertAcknowledged(curlResponse, csvTempFile);
             final List<String> lines = Files.readAllLines(csvTempFile.toPath(), Charsets.UTF_8);
             assertEquals(docNumber + 1, lines.size());
             final String line = lines.get(0);
             assertLineContains(line, "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"");
+        }
+    }
+
+    @Test
+    public void dumpCsvMultitypesInFile() throws IOException {
+        paramsCsv.put("file", csvTempFile.getAbsolutePath());
+
+        try (CurlResponse response = createRequest(node, path_multitypes, paramsCsv).execute()) {
+            assertAcknowledged(response, csvTempFile);
+            final List<String> lines = Files.readAllLines(csvTempFile.toPath());
+            assertEquals(docNumber * 2 + 1, lines.size());
+            final String header = lines.get(0);
+            assertLineContains(header, "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"", "\"nnn\"");
+            final String firstLine = lines.get(1);
+            assertEquals(6, firstLine.split(",").length);
         }
     }
 
@@ -233,7 +246,7 @@ public class DataFormatPluginTest {
 
         // Download All as Excel with Fields
         try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "xls").param("fl", "aaa,eee.ggg").execute()) {
+                .param("format", "xls").param("header_name", "aaa,eee.ggg").execute()) {
             try (InputStream is = curlResponse.getContentAsStream()) {
                 final POIFSFileSystem fs = new POIFSFileSystem(is);
                 final HSSFWorkbook book = new HSSFWorkbook(fs);
@@ -274,25 +287,10 @@ public class DataFormatPluginTest {
     }
 
     @Test
-    public void dumpCsvMultitypesWithFile() throws IOException {
-        paramsCsv.put("file", csvTempFile.getAbsolutePath());
-
-        try (CurlResponse response = sendRequest(node, path_multitypes, paramsCsv)) {
-            assertAcknowledged(response, csvTempFile);
-            final List<String> lines = Files.readAllLines(csvTempFile.toPath());
-            assertEquals(docNumber * 2 + 1, lines.size());
-            final String header = lines.get(0);
-            assertLineContains(header, "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"", "\"eee.hhh\"", "\"nnn\"");
-            final String firstLine = lines.get(1);
-            assertEquals(6, firstLine.split(",").length);
-        }
-    }
-
-    @Test
-    public void dumpXlsWithFile() throws IOException {
+    public void dumpXlsInFile() throws IOException {
         paramsXls.put("file", xlsTempFile.getAbsolutePath());
 
-        try (CurlResponse curlResponse = sendRequest(node, path, paramsXls)) {
+        try (CurlResponse curlResponse = createRequest(node, path, paramsXls).execute()) {
             assertAcknowledged(curlResponse, xlsTempFile);
             try (InputStream is = new FileInputStream(xlsTempFile)) {
                 final POIFSFileSystem fs = new POIFSFileSystem(is);
@@ -389,10 +387,10 @@ public class DataFormatPluginTest {
     }
 
     @Test
-    public void dumpJsonWithFile() throws IOException {
+    public void dumpJsonInFile() throws IOException {
         paramsJson.put("file", jsonTempFile.getAbsolutePath());
 
-        try (CurlResponse curlResponse = sendRequest(node, path, paramsJson)) {
+        try (CurlResponse curlResponse = createRequest(node, path, paramsJson).execute()) {
             assertAcknowledged(curlResponse, jsonTempFile);
             final List<String> lines = Files.readAllLines(jsonTempFile.toPath(), Charsets.UTF_8);
             assertEquals(docNumber * 2, lines.size());
@@ -478,12 +476,12 @@ public class DataFormatPluginTest {
         return file;
     }
 
-    private CurlResponse sendRequest(Node node, String path, Map<String, String> params) {
+    private CurlRequest createRequest(Node node, String path, Map<String, String> params) {
         CurlRequest request = Curl.get(node, path);
         for (final Map.Entry<String, String> entry : params.entrySet()) {
             request.param(entry.getKey(), entry.getValue());
         }
-        return request.execute();
+        return request;
     }
 
     private void assertAcknowledged(CurlResponse response, File file) {
@@ -498,4 +496,22 @@ public class DataFormatPluginTest {
             assertTrue(line.contains(word));
         }
     }
+
+    private void assertLineNotContains(String line, String... words) {
+        for (String word : words) {
+            assertFalse(line.contains(word));
+        }
+    }
+
+    private void dumpCsvSelfdefinedHeader(String param_header) throws IOException {
+        paramsCsv.put(param_header, "aaa, eee.ggg");
+        try (CurlResponse response = createRequest(node, path, paramsCsv).execute()) {
+            final String content = response.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(docNumber + 1, lines.length);
+            assertLineContains(lines[0], "\"aaa\"", "\"eee.ggg\"");
+            assertLineNotContains(lines[0], "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.hhh\"");
+        }
+    }
+
 }

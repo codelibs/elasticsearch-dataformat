@@ -50,13 +50,13 @@ If not, it's as scan query(all data are stored.).
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
-| fl                | string  | Field names you want to contain in CSV |
+| append.header     | boolean | Append column headers if true |
+| header_name       | string  | Self defined header names |
 | source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
 | csv.separator     | string  | Separate character in CSV |
 | csv.quote         | string  | Quote character in CSV|
 | csv.escape        | string  | Escape character in CSV |
 | csv.nullString    | string  | String if a value is null |
-| append.header     | boolean | Append column headers if true |
 | csv.encoding      | string  | Encoding for CSV |
 
 ### Excel
@@ -65,6 +65,8 @@ If not, it's as scan query(all data are stored.).
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
+| append.header     | boolean | Append column headers if true |
+| header_name       | string  | Self defined header names |
 | source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
 
 ### Excel 2007

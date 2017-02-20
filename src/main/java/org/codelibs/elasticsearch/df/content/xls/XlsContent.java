@@ -44,7 +44,7 @@ public class XlsContent extends DataContent {
 
     private static final String DEFAULT_HEADER_COLUMN = "-";
 
-    private boolean appnedHeader;
+    private boolean appendHeader;
 
     private Set<String> headerSet;
 
@@ -55,16 +55,19 @@ public class XlsContent extends DataContent {
     public XlsContent(final Client client, final RestRequest request, final ContentType contentType, final boolean isExcel2007) {
         super(client, request, contentType);
 
-        appnedHeader = request.paramAsBoolean("append.header", true);
-        final String[] fields = request.paramAsStringArray("fl",
-            StringUtils.EMPTY_STRINGS);
+        appendHeader = request.paramAsBoolean("append.header", true);
+        String header_name = "header_name";
+        if (request.hasParam("fl"))
+            header_name = "fl";
+        final String[] fields = request.paramAsStringArray(header_name,
+                StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
             modifiableFieldSet = true;
         } else {
             final Set<String> fieldSet = new LinkedHashSet<String>();
             for (final String field : fields) {
-                fieldSet.add(field);
+                fieldSet.add(field.trim());
             }
             headerSet = Collections.unmodifiableSet(fieldSet);
             modifiableFieldSet = false;
@@ -73,14 +76,14 @@ public class XlsContent extends DataContent {
         this.isExcel2007 = isExcel2007;
 
         if (logger.isDebugEnabled()) {
-            logger.debug("appnedHeader: " + appnedHeader + ", headerSet: "
+            logger.debug("appendHeader: " + appendHeader + ", headerSet: "
                     + headerSet + ", isExcel2007: " + isExcel2007);
         }
     }
 
     @Override
     public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
-            final ActionListener<Void> listener) {
+                      final ActionListener<Void> listener) {
 
         try {
             final OnLoadListener onLoadListener = new OnLoadListener(
@@ -132,7 +135,7 @@ public class XlsContent extends DataContent {
             }
         }
 
- 
+
         private void flushSheet(final int currentCount, final Sheet sheet)
                 throws IOException {
             if (sheet instanceof SXSSFSheet) {
@@ -171,7 +174,7 @@ public class XlsContent extends DataContent {
                             headerSet.add(key);
                         }
                     }
-                    if (appnedHeader) {
+                    if (appendHeader) {
                         final Row headerRow = sheet.createRow(currentCount);
                         int count = 0;
                         for (final String value : headerSet) {
@@ -179,12 +182,12 @@ public class XlsContent extends DataContent {
                             cell.setCellValue(value);
                             count++;
                         }
-                        appnedHeader = false;
+                        appendHeader = false;
                     }
 
                     currentCount++;
                     final Row row = sheet
-                            .createRow(appnedHeader ? currentCount + 1
+                            .createRow(appendHeader ? currentCount + 1
                                     : currentCount);
 
                     int count = 0;
@@ -205,8 +208,7 @@ public class XlsContent extends DataContent {
                 }
 
                 if (size == 0 || scrollId == null) {
-                    try (OutputStream stream = new BufferedOutputStream(
-                            new FileOutputStream(outputFile))) {
+                    try (OutputStream stream = new BufferedOutputStream(new FileOutputStream(outputFile))) {
                         final SecurityManager sm = System.getSecurityManager();
                         if (sm != null) {
                             sm.checkPermission(new SpecialPermission());
