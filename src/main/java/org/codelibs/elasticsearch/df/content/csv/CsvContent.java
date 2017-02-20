@@ -69,7 +69,10 @@ public class CsvContent extends DataContent {
         appendHeader = request.paramAsBoolean("append.header", true);
         charsetName = request.param("csv.encoding", "UTF-8");
 
-        final String[] fields = request.paramAsStringArray("header_name",
+        String header_name = "header_name";
+        if (request.hasParam("fl"))
+            header_name = "fl";
+        final String[] fields = request.paramAsStringArray(header_name,
                 StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
@@ -166,10 +169,10 @@ public class CsvContent extends DataContent {
                                 .createTempFile("dataformat_", ".csv");
                         try (final OutputStream out = Files
                                 .newOutputStream(tempFile);
-                                final CsvWriter writer = new CsvWriter(
-                                        new OutputStreamWriter(out,
-                                                charsetName),
-                                        csvConfig)) {
+                             final CsvWriter writer = new CsvWriter(
+                                     new OutputStreamWriter(out,
+                                             charsetName),
+                                     csvConfig)) {
                             writer.writeValues(headerSet.stream()
                                     .collect(Collectors.toList()));
                             writer.flush();

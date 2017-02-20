@@ -121,14 +121,10 @@ public class DataFormatPluginTest {
 
     @Test
     public void dumpCsvSelfdefinedHeader() throws IOException {
-        paramsCsv.put("header_name", "aaa, eee.ggg");
-        try (CurlResponse response = createRequest(node, path, paramsCsv).execute()) {
-            final String content = response.getContentAsString();
-            final String[] lines = content.split("\n");
-            assertEquals(docNumber + 1, lines.length);
-            assertLineContains(lines[0], "\"aaa\"", "\"eee.ggg\"");
-            assertLineNotContains(lines[0], "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.hhh\"");
-        }
+        dumpCsvSelfdefinedHeader("header_name");
+        clearParams();
+        prepareParams();
+        dumpCsvSelfdefinedHeader("fl");
     }
 
     @Test
@@ -142,29 +138,23 @@ public class DataFormatPluginTest {
     @Test
     public void dumpCsvWithQuery() throws IOException {
 
-        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
-
         // Download 10 docs as CSV with Query
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "csv").param("search_type", "query_then_fetch").body(query).execute()) {
-            final String content = curlResponse.getContentAsString();
-            final String[] lines = content.split("\n");
+        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
+        paramsCsv.put("search_type", "query_then_fetch");
+        try (CurlResponse response = createRequest(node, path, paramsCsv).body(query).execute()) {
+            String[] lines = response.getContentAsString().split("\n");
             assertEquals(11, lines.length);
-            assertTrue(lines[0].contains("\"aaa\""));
-            assertTrue(lines[0].contains("\"bbb\""));
-            assertTrue(lines[0].contains("\"ccc\""));
-            assertTrue(lines[0].contains("\"eee.fff\""));
-            assertTrue(lines[0].contains("\"eee.ggg\""));
-            assertTrue(lines[1].contains("\"1\""));
+            assertLineContains(lines[0], "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"");
+            assertLineContains(lines[1], "\"1\"");
         }
 
         // Download 10 docs as CSV
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("q", "*:*").param("format", "csv").param("from", "5")
-                .execute()) {
-            final String content = curlResponse.getContentAsString();
-            final String[] lines = content.split("\n");
-            assertEquals(11, lines.length);
+        clearParams();
+        prepareParams();
+        paramsCsv.put("q", "*:*");
+        paramsCsv.put("from", "5");
+        try (CurlResponse response = createRequest(node, path, paramsCsv).execute()) {
+            assertEquals(11, response.getContentAsString().split("\n").length);
         }
 
         // Download all the docs from the 5th as CSV
@@ -512,4 +502,16 @@ public class DataFormatPluginTest {
             assertFalse(line.contains(word));
         }
     }
+
+    private void dumpCsvSelfdefinedHeader(String param_header) throws IOException {
+        paramsCsv.put(param_header, "aaa, eee.ggg");
+        try (CurlResponse response = createRequest(node, path, paramsCsv).execute()) {
+            final String content = response.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(docNumber + 1, lines.length);
+            assertLineContains(lines[0], "\"aaa\"", "\"eee.ggg\"");
+            assertLineNotContains(lines[0], "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.hhh\"");
+        }
+    }
+
 }

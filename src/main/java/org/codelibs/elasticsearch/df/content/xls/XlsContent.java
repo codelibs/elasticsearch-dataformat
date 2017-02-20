@@ -56,8 +56,11 @@ public class XlsContent extends DataContent {
         super(client, request, contentType);
 
         appendHeader = request.paramAsBoolean("append.header", true);
-        final String[] fields = request.paramAsStringArray("header_name",
-            StringUtils.EMPTY_STRINGS);
+        String header_name = "header_name";
+        if (request.hasParam("fl"))
+            header_name = "fl";
+        final String[] fields = request.paramAsStringArray(header_name,
+                StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
             modifiableFieldSet = true;
@@ -80,7 +83,7 @@ public class XlsContent extends DataContent {
 
     @Override
     public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
-            final ActionListener<Void> listener) {
+                      final ActionListener<Void> listener) {
 
         try {
             final OnLoadListener onLoadListener = new OnLoadListener(
@@ -132,7 +135,7 @@ public class XlsContent extends DataContent {
             }
         }
 
- 
+
         private void flushSheet(final int currentCount, final Sheet sheet)
                 throws IOException {
             if (sheet instanceof SXSSFSheet) {
@@ -205,8 +208,7 @@ public class XlsContent extends DataContent {
                 }
 
                 if (size == 0 || scrollId == null) {
-                    try (OutputStream stream = new BufferedOutputStream(
-                            new FileOutputStream(outputFile))) {
+                    try (OutputStream stream = new BufferedOutputStream(new FileOutputStream(outputFile))) {
                         final SecurityManager sm = System.getSecurityManager();
                         if (sm != null) {
                             sm.checkPermission(new SpecialPermission());
