@@ -169,8 +169,7 @@ public class RestDataAction extends BaseRestHandler {
              * to capture and react to the result.
              */
             return (channel) -> prepareSearch
-                    .execute(new SearchResponseListener(channel, file,
-                            limitBytes, dataContent));
+                    .execute(new SearchResponseListener(channel, file, limitBytes, dataContent));
         } catch (final Exception e) {
             logger.warn("failed to parse search request parameters", e);
             throw e;

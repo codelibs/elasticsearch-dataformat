@@ -56,10 +56,10 @@ public class XlsContent extends DataContent {
         super(client, request, contentType);
 
         appendHeader = request.paramAsBoolean("append.header", true);
-        String header_name = "header_name";
+        String fields_name = "fields_name";
         if (request.hasParam("fl"))
-            header_name = "fl";
-        final String[] fields = request.paramAsStringArray(header_name,
+            fields_name = "fl";
+        final String[] fields = request.paramAsStringArray(fields_name,
                 StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();
@@ -84,18 +84,16 @@ public class XlsContent extends DataContent {
     @Override
     public void write(final File outputFile, final SearchResponse response, final RestChannel channel,
                       final ActionListener<Void> listener) {
-
         try {
-            final OnLoadListener onLoadListener = new OnLoadListener(
-                    outputFile, listener);
+            final OnLoadListener onLoadListener = new OnLoadListener(outputFile, listener);
             onLoadListener.onResponse(response);
         } catch (final Exception e) {
-            listener.onFailure(new ElasticsearchException("Failed to write data.",
-                    e));
+            listener.onFailure(new ElasticsearchException("Failed to write data.", e));
         }
     }
 
     protected class OnLoadListener implements ActionListener<SearchResponse> {
+
         protected ActionListener<Void> listener;
 
         protected File outputFile;
@@ -104,7 +102,7 @@ public class XlsContent extends DataContent {
 
         private Sheet sheet;
 
-        private int currentCount = 0;
+        private int currentRowNumber = 0;
 
         protected OnLoadListener(final File outputFile, final ActionListener<Void> listener) {
             this.outputFile = outputFile;
@@ -135,7 +133,6 @@ public class XlsContent extends DataContent {
             }
         }
 
-
         private void flushSheet(final int currentCount, final Sheet sheet)
                 throws IOException {
             if (sheet instanceof SXSSFSheet) {
@@ -162,7 +159,7 @@ public class XlsContent extends DataContent {
                 if (logger.isDebugEnabled()) {
                     logger.debug("scrollId: " + scrollId + ", totalHits: "
                             + hits.totalHits() + ", hits: " + size
-                            + ", current: " + (currentCount + size));
+                            + ", current: " + (currentRowNumber + size));
                 }
                 for (final SearchHit hit : hits) {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
@@ -174,21 +171,9 @@ public class XlsContent extends DataContent {
                             headerSet.add(key);
                         }
                     }
-                    if (appendHeader) {
-                        final Row headerRow = sheet.createRow(currentCount);
-                        int count = 0;
-                        for (final String value : headerSet) {
-                            final Cell cell = headerRow.createCell(count);
-                            cell.setCellValue(value);
-                            count++;
-                        }
-                        appendHeader = false;
-                    }
 
-                    currentCount++;
-                    final Row row = sheet
-                            .createRow(appendHeader ? currentCount + 1
-                                    : currentCount);
+                    final Row row = sheet.createRow(appendHeader ? currentRowNumber + 1
+                                    : currentRowNumber);
 
                     int count = 0;
                     for (final String name : headerSet) {
@@ -203,11 +188,21 @@ public class XlsContent extends DataContent {
                         count++;
                     }
 
-                    flushSheet(currentCount, sheet);
-
+                    flushSheet(currentRowNumber, sheet);
+                    currentRowNumber++;
                 }
 
                 if (size == 0 || scrollId == null) {
+                    if (appendHeader) {
+                        final Row headerRow = sheet.createRow(0);
+                        int count = 0;
+                        for (final String value : headerSet) {
+                            final Cell cell = headerRow.createCell(count);
+                            cell.setCellValue(value);
+                            count++;
+                        }
+                    }
+                    flushSheet(0, sheet);
                     try (OutputStream stream = new BufferedOutputStream(new FileOutputStream(outputFile))) {
                         final SecurityManager sm = System.getSecurityManager();
                         if (sm != null) {

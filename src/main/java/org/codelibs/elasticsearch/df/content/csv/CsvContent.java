@@ -69,10 +69,10 @@ public class CsvContent extends DataContent {
         appendHeader = request.paramAsBoolean("append.header", true);
         charsetName = request.param("csv.encoding", "UTF-8");
 
-        String header_name = "header_name";
+        String fields_name = "fields_name";
         if (request.hasParam("fl"))
-            header_name = "fl";
-        final String[] fields = request.paramAsStringArray(header_name,
+            fields_name = "fl";
+        final String[] fields = request.paramAsStringArray(fields_name,
                 StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<String>();

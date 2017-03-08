@@ -52,7 +52,7 @@ If not, it's as scan query(all data are stored.).
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
 | append.header     | boolean | Append column headers if true |
-| header_name       | string  | Self defined header names |
+| fields_name       | string  | choose the fields to dump |
 | source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
 | csv.separator     | string  | Separate character in CSV |
 | csv.quote         | string  | Quote character in CSV|
@@ -67,7 +67,7 @@ If not, it's as scan query(all data are stored.).
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
 | append.header     | boolean | Append column headers if true |
-| header_name       | string  | Self defined header names |
+| fields_name       | string  | choose the fields to dump |
 | source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
 
 ### Excel 2007

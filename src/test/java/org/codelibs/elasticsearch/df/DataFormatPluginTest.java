@@ -120,11 +120,13 @@ public class DataFormatPluginTest {
     }
 
     @Test
-    public void dumpCsvSelfdefinedHeader() throws IOException {
-        dumpCsvSelfdefinedHeader("header_name");
-        clearParams();
-        prepareParams();
-        dumpCsvSelfdefinedHeader("fl");
+    public void dumpCsvWithDenotedFields() throws IOException {
+        dumpCsvWithDenotedFields("fields_name");
+    }
+
+    @Test
+    public void dumpCsvWithDenotedFieldsCompatible() throws IOException {
+        dumpCsvWithDenotedFields("fl");
     }
 
     @Test
@@ -231,32 +233,42 @@ public class DataFormatPluginTest {
     }
 
     @Test
+    public void dumpExcelSimple() throws IOException {
+        try (CurlResponse response = createRequest(node, path, paramsXls).execute()) {
+            try (InputStream is = response.getContentAsStream()) {
+                final POIFSFileSystem fs = new POIFSFileSystem(is);
+                final HSSFWorkbook book = new HSSFWorkbook(fs);
+                final HSSFSheet sheet = book.getSheetAt(0);
+                assertEquals(docNumber, sheet.getLastRowNum());
+            }
+        }
+    }
+
+    @Test
+    public void dumpExcelWithDenotedFields() throws IOException {
+        dumpExcelWithDenotedFields("fields_name");
+    }
+
+    @Test
+    public void dumpExcelWithDenotedFieldsCompatible() throws IOException {
+        dumpExcelWithDenotedFields("fl");
+    }
+
+    @Test
+    public void dumpExcelWithoutHeader() throws IOException {
+        paramsXls.put("append.header", "false");
+        try (CurlResponse response = createRequest(node, path, paramsXls).execute()) {
+            try (InputStream is = response.getContentAsStream()) {
+                final POIFSFileSystem fs = new POIFSFileSystem(is);
+                final HSSFWorkbook book = new HSSFWorkbook(fs);
+                final HSSFSheet sheet = book.getSheetAt(0);
+                assertEquals(docNumber, sheet.getLastRowNum() + 1); // row number begins at 0
+            }
+        }
+    }
+
+    @Test
     public void dumpExcel() throws IOException {
-
-        // Download All as Excel
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "xls").execute()) {
-            try (InputStream is = curlResponse.getContentAsStream()) {
-                final POIFSFileSystem fs = new POIFSFileSystem(is);
-                final HSSFWorkbook book = new HSSFWorkbook(fs);
-                final HSSFSheet sheet = book.getSheetAt(0);
-                assertEquals(docNumber, sheet.getLastRowNum());
-            }
-        }
-
-        // Download All as Excel with Fields
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
-                .param("format", "xls").param("header_name", "aaa,eee.ggg").execute()) {
-            try (InputStream is = curlResponse.getContentAsStream()) {
-                final POIFSFileSystem fs = new POIFSFileSystem(is);
-                final HSSFWorkbook book = new HSSFWorkbook(fs);
-                final HSSFSheet sheet = book.getSheetAt(0);
-                assertEquals(docNumber, sheet.getLastRowNum());
-                final HSSFRow row = sheet.getRow(0);
-                assertEquals("aaa", row.getCell(0).toString());
-                assertEquals("eee.ggg", row.getCell(1).toString());
-            }
-        }
 
         final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
@@ -503,14 +515,29 @@ public class DataFormatPluginTest {
         }
     }
 
-    private void dumpCsvSelfdefinedHeader(String param_header) throws IOException {
-        paramsCsv.put(param_header, "aaa, eee.ggg");
+    private void dumpCsvWithDenotedFields(String fields) throws IOException {
+        paramsCsv.put(fields, "aaa, eee.ggg");
         try (CurlResponse response = createRequest(node, path, paramsCsv).execute()) {
             final String content = response.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber + 1, lines.length);
             assertLineContains(lines[0], "\"aaa\"", "\"eee.ggg\"");
             assertLineNotContains(lines[0], "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.hhh\"");
+        }
+    }
+
+    private void dumpExcelWithDenotedFields(String fields) throws IOException {
+        paramsXls.put(fields, "aaa, eee.ggg");
+        try (CurlResponse response = createRequest(node, path, paramsXls).execute()) {
+            try (InputStream is = response.getContentAsStream()) {
+                final POIFSFileSystem fs = new POIFSFileSystem(is);
+                final HSSFWorkbook book = new HSSFWorkbook(fs);
+                final HSSFSheet sheet = book.getSheetAt(0);
+                assertEquals(docNumber, sheet.getLastRowNum());
+                final HSSFRow row = sheet.getRow(0);
+                assertEquals("aaa", row.getCell(0).toString());
+                assertEquals("eee.ggg", row.getCell(1).toString());
+            }
         }
     }
 
