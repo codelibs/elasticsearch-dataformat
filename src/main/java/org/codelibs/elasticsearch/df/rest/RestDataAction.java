@@ -24,12 +24,8 @@ import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryParseContext;
@@ -40,7 +36,6 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.rest.action.RestActions;
-import org.elasticsearch.search.SearchRequestParsers;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.StoredFieldsContext;
 import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
@@ -55,21 +50,12 @@ public class RestDataAction extends BaseRestHandler {
     private static final String[] emptyStrings = new String[0];
     private static final float DEFAULT_LIMIT_PERCENTAGE = 10;
 
-    private final SearchRequestParsers searchRequestParsers;
-
     private final long maxMemory;
     private final long defaultLimit;
-    private NamedXContentRegistry xContentRegistry;
 
-    @Inject
     public RestDataAction(final Settings settings,
-                          final RestController restController,
-                          final SearchRequestParsers searchRequestParsers,
-                          final NamedXContentRegistry xContentRegistry) {
+                          final RestController restController) {
         super(settings);
-
-        this.searchRequestParsers = searchRequestParsers;
-        this.xContentRegistry = xContentRegistry;
 
         restController.registerHandler(GET, "/_data", this);
         restController.registerHandler(POST, "/_data", this);
@@ -91,37 +77,36 @@ public class RestDataAction extends BaseRestHandler {
                 logger.debug("indices: " + Arrays.toString(indices));
             }
             prepareSearch = client.prepareSearch(indices);
-            Object fromObj = request.param("from");
             // get the content, and put it in the body
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             BytesReference restContent = hasBodyContent(request) ? getRestContent(request) : null;
-            if (restContent != null && restContent.length() > 0) {
-                try (XContentParser parser = XContentFactory.xContent(restContent).createParser(xContentRegistry, restContent)) {
-                    QueryParseContext context = new QueryParseContext(parser, parseFieldMatcher);
-                    searchSourceBuilder.parseXContent(context, searchRequestParsers.aggParsers, searchRequestParsers.suggesters, searchRequestParsers.searchExtParsers);
-                }
-                final Map<String, Object> map = SourceLookup
-                        .sourceAsMap(restContent);
-                fromObj = map.get("from");
-            } else {
-                final String source = request.param("source");
-                if (source != null) {
-                    try (XContentParser parser = XContentFactory.xContent(source).createParser(xContentRegistry, source)) {
-                        QueryParseContext context = new QueryParseContext(parser, parseFieldMatcher);
-                        searchSourceBuilder.parseXContent(context, searchRequestParsers.aggParsers, searchRequestParsers.suggesters, searchRequestParsers.searchExtParsers);
+            request.withContentOrSourceParamParserOrNull(parser -> {
+                Object fromObj = request.param("from");
+                if (restContent != null && restContent.length() > 0) {
+                    QueryParseContext context = new QueryParseContext(parser);
+                    searchSourceBuilder.parseXContent(context);
+
+                    final Map<String, Object> map = SourceLookup
+                            .sourceAsMap(restContent);
+                    fromObj = map.get("from");
+                } else {
+                    final String source = request.param("source");
+                    if (source != null) {
+                        QueryParseContext context = new QueryParseContext(
+                                parser);
+                        searchSourceBuilder.parseXContent(context);
 
                         if (logger.isDebugEnabled()) {
                             logger.debug("source: " + source);
                         }
-                        final Map<String, Object> map = parser
-                                .map();
+                        final Map<String, Object> map = parser.map();
                         fromObj = map.get("from");
                     }
                 }
-            }
-            if (fromObj == null) {
-                prepareSearch.setScroll(RequestUtil.getScroll(request));
-            }
+                if (fromObj == null) {
+                    prepareSearch.setScroll(RequestUtil.getScroll(request));
+                }
+            });
             // add search source based on the request parameters
             prepareSearch.setSource(searchSourceBuilder);
             parseSearchSource(searchSourceBuilder, request);
