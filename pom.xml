@@ -27,7 +27,7 @@
 		<version>9</version>
 	</parent>
 	<properties>
-		<elasticsearch.version>5.4.0</elasticsearch.version>
+		<elasticsearch.version>5.4.1</elasticsearch.version>
 		<elasticsearch.plugin.classname>org.codelibs.elasticsearch.df.DataFormatPlugin</elasticsearch.plugin.classname>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
@@ -123,7 +123,7 @@
 		<dependency>
 			<groupId>org.codelibs</groupId>
 			<artifactId>elasticsearch-cluster-runner</artifactId>
-			<version>5.4.0.0</version>
+			<version>5.4.1.0</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
