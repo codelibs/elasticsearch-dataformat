@@ -18,12 +18,12 @@ import org.elasticsearch.rest.RestHandler;
 
 public class DataFormatPlugin extends Plugin implements ActionPlugin {
     @Override
-    public List<RestHandler> getRestHandlers(Settings settings,
-            RestController restController, ClusterSettings clusterSettings,
-            IndexScopedSettings indexScopedSettings,
-            SettingsFilter settingsFilter,
-            IndexNameExpressionResolver indexNameExpressionResolver,
-            Supplier<DiscoveryNodes> nodesInCluster) {
+    public List<RestHandler> getRestHandlers(final Settings settings,
+            final RestController restController, final ClusterSettings clusterSettings,
+            final IndexScopedSettings indexScopedSettings,
+            final SettingsFilter settingsFilter,
+            final IndexNameExpressionResolver indexNameExpressionResolver,
+            final Supplier<DiscoveryNodes> nodesInCluster) {
         return Arrays.asList(new RestDataAction(settings, restController));
     }
 }

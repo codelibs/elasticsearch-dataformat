@@ -44,7 +44,7 @@ public class CsvContent extends DataContent {
 
     private final CsvConfig csvConfig;
 
-    private boolean appendHeader;
+    private final boolean appendHeader;
 
     private Set<String> headerSet;
 
@@ -70,15 +70,16 @@ public class CsvContent extends DataContent {
         charsetName = request.param("csv.encoding", "UTF-8");
 
         String fields_name = "fields_name";
-        if (request.hasParam("fl"))
+        if (request.hasParam("fl")) {
             fields_name = "fl";
+        }
         final String[] fields = request.paramAsStringArray(fields_name,
                 StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
-            headerSet = new LinkedHashSet<String>();
+            headerSet = new LinkedHashSet<>();
             modifiableFieldSet = true;
         } else {
-            final Set<String> fieldSet = new LinkedHashSet<String>();
+            final Set<String> fieldSet = new LinkedHashSet<>();
             for (final String field : fields) {
                 fieldSet.add(field.trim());
             }
@@ -143,14 +144,14 @@ public class CsvContent extends DataContent {
             try {
                 for (final SearchHit hit : hits) {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
-                    final Map<String, Object> dataMap = new HashMap<String, Object>();
+                    final Map<String, Object> dataMap = new HashMap<>();
                     MapUtils.convertToFlatMap("", sourceMap, dataMap);
                     for (final String key : dataMap.keySet()) {
                         if (modifiableFieldSet && !headerSet.contains(key)) {
                             headerSet.add(key);
                         }
                     }
-                    final List<String> dataList = new ArrayList<String>(
+                    final List<String> dataList = new ArrayList<>(
                             dataMap.size());
                     for (final String name : headerSet) {
                         final Object value = dataMap.get(name);

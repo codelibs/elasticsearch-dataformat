@@ -44,7 +44,7 @@ public class XlsContent extends DataContent {
 
     private static final String DEFAULT_HEADER_COLUMN = "-";
 
-    private boolean appendHeader;
+    private final boolean appendHeader;
 
     private Set<String> headerSet;
 
@@ -57,15 +57,16 @@ public class XlsContent extends DataContent {
 
         appendHeader = request.paramAsBoolean("append.header", true);
         String fields_name = "fields_name";
-        if (request.hasParam("fl"))
+        if (request.hasParam("fl")) {
             fields_name = "fl";
+        }
         final String[] fields = request.paramAsStringArray(fields_name,
                 StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
-            headerSet = new LinkedHashSet<String>();
+            headerSet = new LinkedHashSet<>();
             modifiableFieldSet = true;
         } else {
-            final Set<String> fieldSet = new LinkedHashSet<String>();
+            final Set<String> fieldSet = new LinkedHashSet<>();
             for (final String field : fields) {
                 fieldSet.add(field.trim());
             }
@@ -114,19 +115,9 @@ public class XlsContent extends DataContent {
                     sm.checkPermission(new SpecialPermission());
                 }
                 workbook = AccessController
-                        .doPrivileged(new PrivilegedAction<Workbook>() {
-                            @Override
-                            public Workbook run() {
-                                return new SXSSFWorkbook(-1); // turn off auto-flushing and accumulate all rows in memory
-                            }
-                        });
+                        .doPrivileged((PrivilegedAction<Workbook>) () -> new SXSSFWorkbook(-1));
                 sheet = AccessController
-                        .doPrivileged(new PrivilegedAction<Sheet>() {
-                            @Override
-                            public Sheet run() {
-                                return workbook.createSheet();
-                            }
-                        });
+                        .doPrivileged((PrivilegedAction<Sheet>) () -> workbook.createSheet());
             } else {
                 workbook = new HSSFWorkbook();
                 sheet = workbook.createSheet();
@@ -163,7 +154,7 @@ public class XlsContent extends DataContent {
                 }
                 for (final SearchHit hit : hits) {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
-                    final Map<String, Object> dataMap = new HashMap<String, Object>();
+                    final Map<String, Object> dataMap = new HashMap<>();
                     MapUtils.convertToFlatMap("", sourceMap, dataMap);
 
                     for (final String key : dataMap.keySet()) {
@@ -209,16 +200,13 @@ public class XlsContent extends DataContent {
                             sm.checkPermission(new SpecialPermission());
                         }
                         AccessController
-                                .doPrivileged(new PrivilegedAction<Void>() {
-                                    @Override
-                                    public Void run() {
-                                        try {
-                                            workbook.write(stream);
-                                        } catch (IOException e) {
-                                            throw new ElasticsearchException(e);
-                                        }
-                                        return null;
+                                .doPrivileged((PrivilegedAction<Void>) () -> {
+                                    try {
+                                        workbook.write(stream);
+                                    } catch (final IOException e) {
+                                        throw new ElasticsearchException(e);
                                     }
+                                    return null;
                                 });
 
                         stream.flush();

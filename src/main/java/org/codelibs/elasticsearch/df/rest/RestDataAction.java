@@ -68,6 +68,7 @@ public class RestDataAction extends BaseRestHandler {
         this.defaultLimit = (long) (maxMemory * (DEFAULT_LIMIT_PERCENTAGE / 100F));
     }
 
+    @Override
     protected RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         SearchRequestBuilder prepareSearch;
         try {
@@ -78,12 +79,12 @@ public class RestDataAction extends BaseRestHandler {
             }
             prepareSearch = client.prepareSearch(indices);
             // get the content, and put it in the body
-            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            BytesReference restContent = hasBodyContent(request) ? getRestContent(request) : null;
+            final SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            final BytesReference restContent = hasBodyContent(request) ? getRestContent(request) : null;
             request.withContentOrSourceParamParserOrNull(parser -> {
                 Object fromObj = request.param("from");
                 if (restContent != null && restContent.length() > 0) {
-                    QueryParseContext context = new QueryParseContext(parser);
+                    final QueryParseContext context = new QueryParseContext(parser);
                     searchSourceBuilder.parseXContent(context);
 
                     final Map<String, Object> map = SourceLookup
@@ -92,7 +93,7 @@ public class RestDataAction extends BaseRestHandler {
                 } else {
                     final String source = request.param("source");
                     if (source != null) {
-                        QueryParseContext context = new QueryParseContext(
+                        final QueryParseContext context = new QueryParseContext(
                                 parser);
                         searchSourceBuilder.parseXContent(context);
 
@@ -161,17 +162,17 @@ public class RestDataAction extends BaseRestHandler {
         }
     }
 
-    private static void parseSearchSource(final SearchSourceBuilder searchSourceBuilder, RestRequest request) {
-        QueryBuilder queryBuilder = RestActions.urlParamsToQueryBuilder(request);
+    private static void parseSearchSource(final SearchSourceBuilder searchSourceBuilder, final RestRequest request) {
+        final QueryBuilder queryBuilder = RestActions.urlParamsToQueryBuilder(request);
         if (queryBuilder != null) {
             searchSourceBuilder.query(queryBuilder);
         }
 
-        int from = request.paramAsInt("from", -1);
+        final int from = request.paramAsInt("from", -1);
         if (from != -1) {
             searchSourceBuilder.from(from);
         }
-        int size = request.paramAsInt("size", -1);
+        final int size = request.paramAsInt("size", -1);
         if (size != -1) {
             searchSourceBuilder.size(size);
         }
@@ -186,7 +187,7 @@ public class RestDataAction extends BaseRestHandler {
             searchSourceBuilder.timeout(request.paramAsTime("timeout", null));
         }
         if (request.hasParam("terminate_after")) {
-            int terminateAfter = request.paramAsInt("terminate_after",
+            final int terminateAfter = request.paramAsInt("terminate_after",
                     SearchContext.DEFAULT_TERMINATE_AFTER);
             if (terminateAfter < 0) {
                 throw new IllegalArgumentException("terminateAfter must be > 0");
@@ -203,7 +204,7 @@ public class RestDataAction extends BaseRestHandler {
         }
 
 
-        StoredFieldsContext storedFieldsContext =
+        final StoredFieldsContext storedFieldsContext =
                 StoredFieldsContext.fromRestRequest(SearchSourceBuilder.STORED_FIELDS_FIELD.getPreferredName(), request);
         if (storedFieldsContext != null) {
             searchSourceBuilder.storedFields(storedFieldsContext);
@@ -214,13 +215,13 @@ public class RestDataAction extends BaseRestHandler {
         }
         if (sDocValueFields != null) {
             if (Strings.hasText(sDocValueFields)) {
-                String[] sFields = Strings.splitStringByCommaToArray(sDocValueFields);
-                for (String field : sFields) {
+                final String[] sFields = Strings.splitStringByCommaToArray(sDocValueFields);
+                for (final String field : sFields) {
                     searchSourceBuilder.docValueField(field);
                 }
             }
         }
-        FetchSourceContext fetchSourceContext = FetchSourceContext.parseFromRestRequest(request);
+        final FetchSourceContext fetchSourceContext = FetchSourceContext.parseFromRestRequest(request);
         if (fetchSourceContext != null) {
             searchSourceBuilder.fetchSource(fetchSourceContext);
         }
@@ -229,14 +230,14 @@ public class RestDataAction extends BaseRestHandler {
             searchSourceBuilder.trackScores(request.paramAsBoolean("track_scores", false));
         }
 
-        String sSorts = request.param("sort");
+        final String sSorts = request.param("sort");
         if (sSorts != null) {
-            String[] sorts = Strings.splitStringByCommaToArray(sSorts);
-            for (String sort : sorts) {
-                int delimiter = sort.lastIndexOf(":");
+            final String[] sorts = Strings.splitStringByCommaToArray(sSorts);
+            for (final String sort : sorts) {
+                final int delimiter = sort.lastIndexOf(":");
                 if (delimiter != -1) {
-                    String sortField = sort.substring(0, delimiter);
-                    String reverse = sort.substring(delimiter + 1);
+                    final String sortField = sort.substring(0, delimiter);
+                    final String reverse = sort.substring(delimiter + 1);
                     if ("asc".equals(reverse)) {
                         searchSourceBuilder.sort(sortField, SortOrder.ASC);
                     } else if ("desc".equals(reverse)) {
@@ -248,16 +249,16 @@ public class RestDataAction extends BaseRestHandler {
             }
         }
 
-        String sStats = request.param("stats");
+        final String sStats = request.param("stats");
         if (sStats != null) {
             searchSourceBuilder.stats(Arrays.asList(Strings.splitStringByCommaToArray(sStats)));
         }
 
-        String suggestField = request.param("suggest_field");
+        final String suggestField = request.param("suggest_field");
         if (suggestField != null) {
-            String suggestText = request.param("suggest_text", request.param("q"));
-            int suggestSize = request.paramAsInt("suggest_size", 5);
-            String suggestMode = request.param("suggest_mode");
+            final String suggestText = request.param("suggest_text", request.param("q"));
+            final int suggestSize = request.paramAsInt("suggest_size", 5);
+            final String suggestMode = request.param("suggest_mode");
             searchSourceBuilder.suggest(new SuggestBuilder().addSuggestion(suggestField,
                     termSuggestion(suggestField)
                             .text(suggestText).size(suggestSize)
@@ -304,12 +305,12 @@ public class RestDataAction extends BaseRestHandler {
         return request.hasContent() || request.hasParam("source");
     }
 
-    private static BytesReference getRestContent(RestRequest request) {
+    private static BytesReference getRestContent(final RestRequest request) {
         assert request != null;
 
         BytesReference content = request.content();
         if (!request.hasContent()) {
-            String source = request.param("source");
+            final String source = request.param("source");
             if (source != null) {
                 content = new BytesArray(source);
             }
@@ -324,9 +325,9 @@ public class RestDataAction extends BaseRestHandler {
 
         private File outputFile;
 
-        private DataContent dataContent;
+        private final DataContent dataContent;
 
-        private long limit;
+        private final long limit;
 
         SearchResponseListener(final RestChannel channel, final String file, final long limit,
                                final DataContent dataContent) {
@@ -431,7 +432,7 @@ public class RestDataAction extends BaseRestHandler {
 
             try (FileInputStream fis = new FileInputStream(outputFile)) {
                 final ByteArrayOutputStream out = new ByteArrayOutputStream();
-                byte[] bytes = new byte[1024];
+                final byte[] bytes = new byte[1024];
                 int len;
                 while ((len = fis.read(bytes)) > 0) {
                     out.write(bytes, 0, len);
