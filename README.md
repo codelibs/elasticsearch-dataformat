@@ -8,22 +8,7 @@ The supported formats are CSV, Excel and JSON(Bulk).
 
 ## Version
 
-| Version   | Tested on ES  |
-|:---------:|:-------------:|
-| master    | 5.3.x         |
-| 5.3.0     | 5.3.0         |
-| 5.2.1     | 5.2.1         |
-| 5.0.0     | 5.0.2         |
-| 2.4.0     | 2.4.0         |
-| 2.3.0     | 2.3.1         |
-| 2.2.0     | 2.2.0         |
-| 2.1.1     | 2.1.1         |
-| 1.6.0     | 1.6.0         |
-| 1.5.0     | 1.5.0         |
-| 1.4.1     | 1.4.2         |
-| 1.3.1     | 1.3.2         |
-| 1.2.0     | 1.2.4         |
-| 0.1.0     | 0.90.7        |
+[Versions in Maven Repository](http://central.maven.org/maven2/org/codelibs/elasticsearch-dataformat/)
 
 ### Issues/Questions
 
