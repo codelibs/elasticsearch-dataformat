@@ -138,12 +138,12 @@ public class CsvContent extends DataContent {
             currentCount += size;
             if (logger.isDebugEnabled()) {
                 logger.debug("scrollId: " + scrollId + ", totalHits: "
-                        + hits.totalHits() + ", hits: " + size + ", current: "
+                        + hits.getTotalHits() + ", hits: " + size + ", current: "
                         + currentCount);
             }
             try {
                 for (final SearchHit hit : hits) {
-                    final Map<String, Object> sourceMap = hit.sourceAsMap();
+                    final Map<String, Object> sourceMap = hit.getSourceAsMap();
                     final Map<String, Object> dataMap = new HashMap<>();
                     MapUtils.convertToFlatMap("", sourceMap, dataMap);
                     for (final String key : dataMap.keySet()) {

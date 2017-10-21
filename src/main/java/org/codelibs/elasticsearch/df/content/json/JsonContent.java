@@ -77,19 +77,19 @@ public class JsonContent extends DataContent {
             currentCount += size;
             if (logger.isDebugEnabled()) {
                 logger.debug("scrollId: " + scrollId + ", totalHits: "
-                        + hits.totalHits() + ", hits: " + size + ", current: "
+                        + hits.getTotalHits() + ", hits: " + size + ", current: "
                         + currentCount);
             }
             try {
                 for (final SearchHit hit : hits) {
-                    final String index = bulkIndex == null ? hit.index()
+                    final String index = bulkIndex == null ? hit.getIndex()
                             : bulkIndex;
-                    final String type = bulkType == null ? hit.type()
+                    final String type = bulkType == null ? hit.getType()
                             : bulkType;
                     final String operation = "{\"index\":{\"_index\":\""
                             + index + "\",\"_type\":\"" + type
-                            + "\",\"_id\":\"" + hit.id() + "\"}}";
-                    final String source = hit.sourceAsString();
+                            + "\",\"_id\":\"" + hit.getId() + "\"}}";
+                    final String source = hit.getSourceAsString();
                     writer.append(operation).append('\n');
                     writer.append(source).append('\n');
                 }
