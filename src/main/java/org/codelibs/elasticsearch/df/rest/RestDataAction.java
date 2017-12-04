@@ -53,8 +53,10 @@ public class RestDataAction extends BaseRestHandler {
     public RestChannelConsumer prepareRequest(final RestRequest request,
             final NodeClient client) throws IOException {
         SearchRequest searchRequest = new SearchRequest();
-        request.withContentOrSourceParamParserOrNull(parser -> RestSearchAction
-                .parseSearchRequest(searchRequest, request, parser));
+        request.withContentOrSourceParamParserOrNull(
+                parser -> RestSearchAction.parseSearchRequest(searchRequest,
+                        request, parser,
+                        size -> searchRequest.source().size(size)));
 
         if (request.paramAsInt("size", -1) == -1) {
             searchRequest.source().size(100);
