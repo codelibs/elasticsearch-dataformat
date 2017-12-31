@@ -79,7 +79,7 @@ public class DataFormatPluginTest {
             public void build(final int number, final Builder settingsBuilder) {
                 settingsBuilder.put("http.cors.enabled", true);
                 settingsBuilder.put("http.cors.allow-origin", "*");
-                settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
+                settingsBuilder.putList("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
             }
         }).build(newConfigs().clusterName(clusterName).numOfNode(1)
                 .pluginTypes("org.codelibs.elasticsearch.df.DataFormatPlugin"));
