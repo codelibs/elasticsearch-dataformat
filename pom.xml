@@ -123,7 +123,7 @@
 		<dependency>
 			<groupId>org.codelibs</groupId>
 			<artifactId>elasticsearch-cluster-runner</artifactId>
-			<version>${elasticsearch.version}.0</version>
+			<version>${elasticsearch.version}.1</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
