@@ -16,6 +16,8 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.Loggers;
+import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
@@ -89,7 +91,8 @@ public class JsonContent extends DataContent {
                     final String operation = "{\"index\":{\"_index\":\""
                             + index + "\",\"_type\":\"" + type
                             + "\",\"_id\":\"" + hit.id() + "\"}}";
-                    final String source = hit.sourceAsString();
+                    final String source = XContentHelper.convertToJson(
+                            hit.getSourceRef(), true, false, XContentType.JSON);
                     writer.append(operation).append('\n');
                     writer.append(source).append('\n');
                 }
