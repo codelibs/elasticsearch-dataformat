@@ -183,9 +183,8 @@ public class CsvContent extends DataContent {
                             if (finished) {
                                 Files.copy(tempFile, outputFile.toPath(),
                                         StandardCopyOption.REPLACE_EXISTING);
-                            } else {
-                                Files.delete(tempFile);
                             }
+                            Files.delete(tempFile);
                         }
                     }
                     listener.onResponse(null);
