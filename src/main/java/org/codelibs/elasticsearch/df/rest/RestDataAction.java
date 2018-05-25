@@ -19,6 +19,7 @@ import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
@@ -56,8 +57,7 @@ public class RestDataAction extends BaseRestHandler {
         request.withContentOrSourceParamParserOrNull(
                 parser -> RestSearchAction.parseSearchRequest(searchRequest,
                         request, parser,
-                        size -> searchRequest.source().size(size)));
-
+                        size -> request.contentOrSourceParam().v2().length()));
         if (request.paramAsInt("size", -1) == -1) {
             searchRequest.source().size(100);
         }
