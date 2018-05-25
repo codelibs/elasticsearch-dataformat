@@ -152,6 +152,17 @@ public class XlsContent extends DataContent {
                             + hits.getTotalHits() + ", hits: " + size
                             + ", current: " + (currentRowNumber + size));
                 }
+                
+                if (appendHeader) {
+                    final Row headerRow = sheet.createRow(0);
+                    int count = 0;
+                    for (final String value : headerSet) {
+                        final Cell cell = headerRow.createCell(count);
+                        cell.setCellValue(value);
+                        count++;
+                    }
+                }
+
                 for (final SearchHit hit : hits) {
                     final Map<String, Object> sourceMap = hit.getSourceAsMap();
                     final Map<String, Object> dataMap = new HashMap<>();
@@ -184,15 +195,7 @@ public class XlsContent extends DataContent {
                 }
 
                 if (size == 0 || scrollId == null) {
-                    if (appendHeader) {
-                        final Row headerRow = sheet.createRow(0);
-                        int count = 0;
-                        for (final String value : headerSet) {
-                            final Cell cell = headerRow.createCell(count);
-                            cell.setCellValue(value);
-                            count++;
-                        }
-                    }
+                    
                     flushSheet(0, sheet);
                     try (OutputStream stream = new BufferedOutputStream(new FileOutputStream(outputFile))) {
                         final SecurityManager sm = System.getSecurityManager();
