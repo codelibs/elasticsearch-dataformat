@@ -33,7 +33,7 @@ If not, it's as scan query(all data are stored.).
 
 ### CSV
 
-    $ curl -o /tmp/data.csv -XGET "localhost:9200/{index}/{type}/_data?format=csv&source=..."
+    $ curl -g -o /tmp/data.csv -XGET "localhost:9200/{index}/{type}/_data?format=csv&source=..."
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
@@ -48,7 +48,7 @@ If not, it's as scan query(all data are stored.).
 
 ### Excel
 
-    $ curl -o /tmp/data.xls -XGET "localhost:9200/{index}/{type}/_data?format=xls&source=..."
+    $ curl -g -o /tmp/data.xls -XGET "localhost:9200/{index}/{type}/_data?format=xls&source=..."
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
@@ -58,7 +58,7 @@ If not, it's as scan query(all data are stored.).
 
 ### Excel 2007
 
-    $ curl -o /tmp/data.xlsx -XGET "localhost:9200/{index}/{type}/_data?format=xlsx&source=..."
+    $ curl -g -o /tmp/data.xlsx -XGET -H "Content-Type: application/json" "localhost:9200/{index}/{type}/_data?format=xlsx" -d'{"query":{"match_all":{}}}'
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
@@ -66,7 +66,7 @@ If not, it's as scan query(all data are stored.).
 
 ### JSON (Elasticsearch Bulk format)
 
-    $ curl -o /tmp/data.json -XGET "localhost:9200/{index}/{type}/_data?format=json&source=..."
+    $ curl -g -o /tmp/data.json -XGET "localhost:9200/{index}/{type}/_data?format=json&source=..."
 
 | Request Parameter | Type    | Description |
 |:------------------|:-------:|:------------|
