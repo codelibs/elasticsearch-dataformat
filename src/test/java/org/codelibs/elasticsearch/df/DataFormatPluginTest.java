@@ -19,11 +19,11 @@ import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.codelibs.curl.CurlException;
+import org.codelibs.curl.CurlRequest;
+import org.codelibs.curl.CurlResponse;
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner;
-import org.codelibs.elasticsearch.runner.net.Curl;
-import org.codelibs.elasticsearch.runner.net.CurlException;
-import org.codelibs.elasticsearch.runner.net.CurlRequest;
-import org.codelibs.elasticsearch.runner.net.CurlResponse;
+import org.codelibs.elasticsearch.runner.net.EcrCurl;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -165,7 +165,7 @@ public class DataFormatPluginTest {
         }
 
         // Download all the docs from the 5th as CSV
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json").param("q", "*:*")
                 .param("format", "csv").param("from", "5")
                 .param("size", String.valueOf(docNumber)).execute()) {
@@ -177,7 +177,7 @@ public class DataFormatPluginTest {
         final String queryWithFrom = "{\"query\":{\"match_all\":{}},\"from\":10,\"size\":" + String.valueOf(docNumber) + ",\"sort\":[\"bbb\"]}";
 
         // Download All as CSV with Query and from
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").body(queryWithFrom).execute()) {
             final String content = curlResponse.getContentAsString();
@@ -186,7 +186,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as CSV with Query and from
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").param("source", queryWithFrom)
                 .param("source_content_type", "application/json")
@@ -197,7 +197,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as CSV with search_type
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("search_type", "query_then_fetch").param("format", "csv")
                 .execute()) {
@@ -268,7 +268,7 @@ public class DataFormatPluginTest {
         final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
         // Download 10 docs as Excel with Query
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "xls").param("search_type", "query_then_fetch")
                 .body(query).execute()) {
@@ -283,7 +283,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as Excel with search_type
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("search_type", "query_then_fetch").param("format", "xls")
                 .execute()) {
@@ -315,7 +315,7 @@ public class DataFormatPluginTest {
     public void dumpJson() throws IOException {
 
         // Download All as JSON
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json").execute()) {
             final String content = curlResponse.getContentAsString();
@@ -326,7 +326,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as JSON with index/type
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json").param("bulk.index", "dataset02")
                 .param("bulk.type", "item02").execute()) {
@@ -340,7 +340,7 @@ public class DataFormatPluginTest {
         final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
         // Download 10 docs as JSON with Query
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json")
                 .param("search_type", "query_then_fetch").body(query)
@@ -353,7 +353,7 @@ public class DataFormatPluginTest {
         }
 
         // Download 10 docs as JSON
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json").param("q", "*:*")
                 .param("format", "json").param("from", "5").execute()) {
             final String content = curlResponse.getContentAsString();
@@ -362,7 +362,7 @@ public class DataFormatPluginTest {
         }
 
         // Download all the docs from the 5th as JSON
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json").param("q", "*:*")
                 .param("format", "json").param("from", "5")
                 .param("size", String.valueOf(docNumber)).execute()) {
@@ -374,7 +374,7 @@ public class DataFormatPluginTest {
         final String queryWithFrom = "{\"query\":{\"match_all\":{}},\"from\":5,\"size\":" + String.valueOf(docNumber) + ",\"sort\":[\"bbb\"]}";
 
         // Download All as JSON with Query and from
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json").body(queryWithFrom).execute()) {
             final String content = curlResponse.getContentAsString();
@@ -383,7 +383,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as JSON with Query and from
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json").param("source", queryWithFrom)
                 .param("source_content_type", "application/json")
@@ -394,7 +394,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as JSON with search_type
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("search_type", "query_then_fetch")
                 .param("format", "json").execute()) {
@@ -424,7 +424,7 @@ public class DataFormatPluginTest {
     public void dumpSizeLimit() throws IOException {
 
         // Default
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").execute()) {
             final String content = curlResponse.getContentAsString();
@@ -433,7 +433,7 @@ public class DataFormatPluginTest {
         }
 
         // 50%
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").param("limit", "50%").execute()) {
             final String content = curlResponse.getContentAsString();
@@ -442,7 +442,7 @@ public class DataFormatPluginTest {
         }
 
         //0%
-        try (CurlResponse curlResponse = Curl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").param("limit", "0").execute()) {
             curlResponse.getContentAsString();
@@ -494,7 +494,7 @@ public class DataFormatPluginTest {
     }
 
     private CurlRequest createRequest(Node node, String path, Map<String, String> params) {
-        CurlRequest request = Curl.get(node, path).header("Content-Type", "application/json");
+        CurlRequest request = EcrCurl.get(node, path).header("Content-Type", "application/json");
         for (final Map.Entry<String, String> entry : params.entrySet()) {
             request.param(entry.getKey(), entry.getValue());
         }
@@ -502,7 +502,7 @@ public class DataFormatPluginTest {
     }
 
     private void assertAcknowledged(CurlResponse response, File file) {
-        Map<String, Object> contentAsMap = response.getContentAsMap();
+        Map<String, Object> contentAsMap = response.getContent(EcrCurl.jsonParser);
         assertEquals("true", contentAsMap.get("acknowledged").toString());
         assertEquals(file.getName(),
                 new File(contentAsMap.get("file").toString()).getName());
