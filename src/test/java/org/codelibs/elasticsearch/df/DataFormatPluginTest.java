@@ -19,7 +19,6 @@ import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
-import org.codelibs.curl.CurlException;
 import org.codelibs.curl.CurlRequest;
 import org.codelibs.curl.CurlResponse;
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner;
@@ -445,10 +444,7 @@ public class DataFormatPluginTest {
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").param("limit", "0").execute()) {
-            curlResponse.getContentAsString();
-            Assert.fail();
-        } catch (CurlException e) {
-            assertTrue(true);
+            assertEquals(500, curlResponse.getHttpStatusCode());
         }
     }
 
