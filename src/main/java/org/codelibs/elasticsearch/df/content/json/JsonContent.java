@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
@@ -15,7 +16,6 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestChannel;
@@ -24,7 +24,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 
 public class JsonContent extends DataContent {
-    private static final Logger logger = Loggers.getLogger(JsonContent.class);
+    private static final Logger logger = LogManager.getLogger(JsonContent.class);
 
     private final String bulkIndex;
 

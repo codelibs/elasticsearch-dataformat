@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
@@ -28,7 +29,6 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
@@ -38,7 +38,7 @@ import com.orangesignal.csv.CsvConfig;
 import com.orangesignal.csv.CsvWriter;
 
 public class CsvContent extends DataContent {
-    private static final Logger logger = Loggers.getLogger(CsvContent.class);
+    private static final Logger logger = LogManager.getLogger(CsvContent.class);
 
     private final String charsetName;
 

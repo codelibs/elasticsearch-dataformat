@@ -13,6 +13,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
@@ -31,14 +32,13 @@ import org.elasticsearch.SpecialPermission;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 
 public class XlsContent extends DataContent {
-    private static final Logger logger = Loggers.getLogger(XlsContent.class);
+    private static final Logger logger = LogManager.getLogger(XlsContent.class);
 
     private static final int SXSSF_FLUSH_COUNT = 1000;
 
