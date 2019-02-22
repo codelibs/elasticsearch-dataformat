@@ -78,7 +78,8 @@ public class DataFormatPluginTest {
             public void build(final int number, final Builder settingsBuilder) {
                 settingsBuilder.put("http.cors.enabled", true);
                 settingsBuilder.put("http.cors.allow-origin", "*");
-                settingsBuilder.putList("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
+                settingsBuilder.putList("discovery.seed_hosts", "127.0.0.1:9301");
+                settingsBuilder.putList("cluster.initial_master_nodes", "127.0.0.1:9301");
             }
         }).build(newConfigs().clusterName(clusterName).numOfNode(1)
                 .pluginTypes("org.codelibs.elasticsearch.df.DataFormatPlugin"));
@@ -474,7 +475,7 @@ public class DataFormatPluginTest {
 
         // search documents to verify
         SearchResponse searchResponse = runner.search(index0, type0, null, null, 0, 10);
-        assertEquals(docNumber, searchResponse.getHits().getTotalHits());
+        assertEquals(docNumber, searchResponse.getHits().getTotalHits().value);
     }
 
     private static File createTempFile(String prefix, String suffix) {

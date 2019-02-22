@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.codelibs</groupId>
 	<artifactId>elasticsearch-dataformat</artifactId>
-	<version>6.6.1-SNAPSHOT</version>
+	<version>7.0.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<name>Elasticsearch Data Format</name>
 	<description>This plugin provides several response formats.</description>
@@ -27,7 +27,7 @@
 		<version>9</version>
 	</parent>
 	<properties>
-		<elasticsearch.version>6.6.0</elasticsearch.version>
+		<elasticsearch.version>7.0.0-beta1</elasticsearch.version>
 		<elasticsearch.plugin.classname>org.codelibs.elasticsearch.df.DataFormatPlugin</elasticsearch.plugin.classname>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
@@ -134,4 +134,17 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+	<repositories>
+		<repository>
+			<id>elastic-lucene-snapshots</id>
+			<name>Elastic Lucene Snapshots</name>
+			<url>http://s3.amazonaws.com/download.elasticsearch.org/lucenesnapshots/83f9835</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
 </project>
