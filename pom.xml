@@ -27,7 +27,7 @@
 		<version>9</version>
 	</parent>
 	<properties>
-		<elasticsearch.version>7.0.0-beta1</elasticsearch.version>
+		<elasticsearch.version>7.0.0-rc1</elasticsearch.version>
 		<elasticsearch.plugin.classname>org.codelibs.elasticsearch.df.DataFormatPlugin</elasticsearch.plugin.classname>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
@@ -134,17 +134,4 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-	<repositories>
-		<repository>
-			<id>elastic-lucene-snapshots</id>
-			<name>Elastic Lucene Snapshots</name>
-			<url>http://s3.amazonaws.com/download.elasticsearch.org/lucenesnapshots/83f9835</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
 </project>
