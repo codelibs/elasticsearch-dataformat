@@ -499,7 +499,7 @@ public class DataFormatPluginTest {
     }
 
     private void assertAcknowledged(CurlResponse response, File file) {
-        Map<String, Object> contentAsMap = response.getContent(EcrCurl.jsonParser);
+        Map<String, Object> contentAsMap = response.getContent(EcrCurl.jsonParser());
         assertEquals("true", contentAsMap.get("acknowledged").toString());
         assertEquals(file.getName(),
                 new File(contentAsMap.get("file").toString()).getName());
