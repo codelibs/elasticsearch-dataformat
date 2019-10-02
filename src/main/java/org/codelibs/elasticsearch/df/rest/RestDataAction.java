@@ -37,8 +37,6 @@ public class RestDataAction extends BaseRestHandler {
 
     public RestDataAction(final Settings settings,
                           final RestController restController) {
-        super(settings);
-
         restController.registerHandler(GET, "/_data", this);
         restController.registerHandler(POST, "/_data", this);
         restController.registerHandler(GET, "/{index}/_data", this);
