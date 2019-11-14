@@ -98,7 +98,7 @@ public class RestDataAction extends BaseRestHandler {
         final String contentType = request.param("format",
                 request.header("Content-Type"));
         if (logger.isDebugEnabled()) {
-            logger.debug("contentType: " + contentType);
+            logger.debug("contentType: {}", contentType);
         }
         if ("text/csv".equals(contentType)
                 || "text/comma-separated-values".equals(contentType)
@@ -157,7 +157,7 @@ public class RestDataAction extends BaseRestHandler {
                     outputFile = File.createTempFile("es_df_output_", ".dat");
                 }
                 if (logger.isDebugEnabled()) {
-                    logger.debug("outputFile: " + outputFile.getAbsolutePath());
+                    logger.debug("outputFile: {}", outputFile.getAbsolutePath());
                 }
                 dataContent.write(outputFile, response, channel,
                         new ActionListener<Void>() {
