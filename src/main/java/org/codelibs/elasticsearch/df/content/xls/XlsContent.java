@@ -46,6 +46,8 @@ public class XlsContent extends DataContent {
 
     private final boolean appendHeader;
 
+    private boolean headerFlushed = false;
+
     private Set<String> headerSet;
 
     private boolean modifiableFieldSet;
@@ -56,11 +58,11 @@ public class XlsContent extends DataContent {
         super(client, request, contentType);
 
         appendHeader = request.paramAsBoolean("append.header", true);
-        String fields_name = "fields_name";
+        String fieldsName = "fields_name";
         if (request.hasParam("fl")) {
-            fields_name = "fl";
+            fieldsName = "fl";
         }
-        final String[] fields = request.paramAsStringArray(fields_name,
+        final String[] fields = request.paramAsStringArray(fieldsName,
                 StringUtils.EMPTY_STRINGS);
         if (fields.length == 0) {
             headerSet = new LinkedHashSet<>();
@@ -163,6 +165,17 @@ public class XlsContent extends DataContent {
                         }
                     }
 
+                    if (!headerFlushed && appendHeader) {
+                        final Row headerRow = sheet.createRow(0);
+                        int count = 0;
+                        for (final String value : headerSet) {
+                            final Cell cell = headerRow.createCell(count);
+                            cell.setCellValue(value);
+                            count++;
+                        }
+                        headerFlushed = true;
+                    }
+
                     final Row row = sheet.createRow(appendHeader ? currentRowNumber + 1
                                     : currentRowNumber);
 
@@ -184,15 +197,6 @@ public class XlsContent extends DataContent {
                 }
 
                 if (size == 0 || scrollId == null) {
-                    if (appendHeader) {
-                        final Row headerRow = sheet.createRow(0);
-                        int count = 0;
-                        for (final String value : headerSet) {
-                            final Cell cell = headerRow.createCell(count);
-                            cell.setCellValue(value);
-                            count++;
-                        }
-                    }
                     flushSheet(0, sheet);
                     try (OutputStream stream = new BufferedOutputStream(new FileOutputStream(outputFile))) {
                         final SecurityManager sm = System.getSecurityManager();

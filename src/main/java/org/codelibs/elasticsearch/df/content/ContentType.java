@@ -30,11 +30,7 @@ public enum ContentType {
             if (index == null) {
                 return "_all.csv";
             }
-            final String type = request.param("type");
-            if (type == null) {
-                return index + ".csv";
-            }
-            return index + "_" + type + ".csv";
+            return index + ".csv";
         }
     },
     EXCEL(20) {
@@ -55,11 +51,7 @@ public enum ContentType {
             if (index == null) {
                 return "_all.xls";
             }
-            final String type = request.param("type");
-            if (type == null) {
-                return index + ".xls";
-            }
-            return index + "_" + type + ".xls";
+            return index + ".xls";
         }
     },
     JSON(30) {
@@ -80,11 +72,7 @@ public enum ContentType {
             if (index == null) {
                 return "_all.json";
             }
-            final String type = request.param("type");
-            if (type == null) {
-                return index + ".json";
-            }
-            return index + "_" + type + ".json";
+            return index + ".json";
         }
     },
     EXCEL2007(40) {
@@ -105,11 +93,7 @@ public enum ContentType {
             if (index == null) {
                 return "_all.xlsx";
             }
-            final String type = request.param("type");
-            if (type == null) {
-                return index + ".xlsx";
-            }
-            return index + "_" + type + ".xlsx";
+            return index + ".xlsx";
         }
     };
 

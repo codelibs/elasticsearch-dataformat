@@ -9,6 +9,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.df.content.ContentType;
 import org.codelibs.elasticsearch.df.content.DataContent;
 import org.elasticsearch.ElasticsearchException;
@@ -32,6 +34,8 @@ public class RestDataAction extends BaseRestHandler {
 
     private static final float DEFAULT_LIMIT_PERCENTAGE = 10;
 
+    private static Logger logger = LogManager.getLogger(RestDataAction.class);
+
     private final long maxMemory;
     private final long defaultLimit;
 
@@ -41,11 +45,11 @@ public class RestDataAction extends BaseRestHandler {
         restController.registerHandler(POST, "/_data", this);
         restController.registerHandler(GET, "/{index}/_data", this);
         restController.registerHandler(POST, "/{index}/_data", this);
-        restController.registerHandler(GET, "/{index}/{type}/_data", this);
-        restController.registerHandler(POST, "/{index}/{type}/_data", this);
 
         this.maxMemory = Runtime.getRuntime().maxMemory();
-        this.defaultLimit = (long) (maxMemory * (DEFAULT_LIMIT_PERCENTAGE / 100F));
+        this.defaultLimit = (long) (maxMemory
+                * (DEFAULT_LIMIT_PERCENTAGE / 100F));
+        logger.info("Default limit: {}", defaultLimit);
     }
 
     public RestChannelConsumer prepareRequest(final RestRequest request,
@@ -84,6 +88,7 @@ public class RestDataAction extends BaseRestHandler {
         final DataContent dataContent = contentType.dataContent(client,
                 request);
 
+        searchRequest.scroll(request.param("scroll", "1m"));
         return channel -> client.search(searchRequest, new SearchResponseListener(
                 channel, file, limitBytes, dataContent));
     }
@@ -195,7 +200,7 @@ public class RestDataAction extends BaseRestHandler {
 
         private void deleteOutputFile() {
             if (outputFile != null && !outputFile.delete()) {
-                logger.warn("Failed to delete: " + outputFile.getAbsolutePath());
+                logger.warn("Failed to delete: {}", outputFile.getAbsolutePath());
             }
         }
 
