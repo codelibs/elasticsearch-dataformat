@@ -64,7 +64,7 @@ public class DataFormatPluginTest {
         csvTempFile = createTempFile("csvtest", ".csv");
         xlsTempFile = createTempFile("xlstest", ".xls");
         jsonTempFile = createTempFile("jsontest", ".json");
-        path = "/dataset0/item0/_data";
+        path = "/dataset0/_data";
     }
 
     @BeforeClass
@@ -166,7 +166,7 @@ public class DataFormatPluginTest {
         }
 
         // Download all the docs from the 5th as CSV
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json").param("q", "*:*")
                 .param("format", "csv").param("from", "5")
                 .param("size", String.valueOf(docNumber)).execute()) {
@@ -178,7 +178,7 @@ public class DataFormatPluginTest {
         final String queryWithFrom = "{\"query\":{\"match_all\":{}},\"from\":10,\"size\":" + String.valueOf(docNumber) + ",\"sort\":[\"bbb\"]}";
 
         // Download All as CSV with Query and from
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").body(queryWithFrom).execute()) {
             final String content = curlResponse.getContentAsString();
@@ -187,7 +187,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as CSV with Query and from
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").param("source", queryWithFrom)
                 .param("source_content_type", "application/json")
@@ -198,7 +198,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as CSV with search_type
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("search_type", "query_then_fetch").param("format", "csv")
                 .execute()) {
@@ -269,7 +269,7 @@ public class DataFormatPluginTest {
         final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
         // Download 10 docs as Excel with Query
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "xls").param("search_type", "query_then_fetch")
                 .body(query).execute()) {
@@ -284,7 +284,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as Excel with search_type
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("search_type", "query_then_fetch").param("format", "xls")
                 .execute()) {
@@ -316,32 +316,32 @@ public class DataFormatPluginTest {
     public void dumpJson() throws IOException {
 
         // Download All as JSON
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json").execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber * 2, lines.length);
-            assertTrue(lines[0].startsWith("{\"index\":{\"_index\":\"dataset0\",\"_type\":\"item0\","));
+            assertTrue(lines[0].startsWith("{\"index\":{\"_index\":\"dataset0\","));
             assertTrue(lines[1].startsWith("{\"aaa\""));
         }
 
         // Download All as JSON with index/type
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json").param("bulk.index", "dataset02")
-                .param("bulk.type", "item02").execute()) {
+                .execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber * 2, lines.length);
-            assertTrue(lines[0].startsWith("{\"index\":{\"_index\":\"dataset02\",\"_type\":\"item02\","));
+            assertTrue(lines[0].startsWith("{\"index\":{\"_index\":\"dataset02\","));
             assertTrue(lines[1].startsWith("{\"aaa\""));
         }
 
         final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
 
         // Download 10 docs as JSON with Query
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json")
                 .param("search_type", "query_then_fetch").body(query)
@@ -354,7 +354,7 @@ public class DataFormatPluginTest {
         }
 
         // Download 10 docs as JSON
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json").param("q", "*:*")
                 .param("format", "json").param("from", "5").execute()) {
             final String content = curlResponse.getContentAsString();
@@ -363,7 +363,7 @@ public class DataFormatPluginTest {
         }
 
         // Download all the docs from the 5th as JSON
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json").param("q", "*:*")
                 .param("format", "json").param("from", "5")
                 .param("size", String.valueOf(docNumber)).execute()) {
@@ -375,7 +375,7 @@ public class DataFormatPluginTest {
         final String queryWithFrom = "{\"query\":{\"match_all\":{}},\"from\":5,\"size\":" + String.valueOf(docNumber) + ",\"sort\":[\"bbb\"]}";
 
         // Download All as JSON with Query and from
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json").body(queryWithFrom).execute()) {
             final String content = curlResponse.getContentAsString();
@@ -384,7 +384,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as JSON with Query and from
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json").param("source", queryWithFrom)
                 .param("source_content_type", "application/json")
@@ -395,7 +395,7 @@ public class DataFormatPluginTest {
         }
 
         // Download All as JSON with search_type
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("search_type", "query_then_fetch")
                 .param("format", "json").execute()) {
@@ -416,7 +416,7 @@ public class DataFormatPluginTest {
             final List<String> lines = Files.readAllLines(jsonTempFile.toPath(), Charsets.UTF_8);
             assertEquals(docNumber * 2, lines.size());
             assertTrue(lines.get(0).startsWith(
-                    "{\"index\":{\"_index\":\"dataset0\",\"_type\":\"item0\","));
+                    "{\"index\":{\"_index\":\"dataset0\","));
             assertTrue(lines.get(1).startsWith("{\"aaa\""));
         }
     }
@@ -425,7 +425,7 @@ public class DataFormatPluginTest {
     public void dumpSizeLimit() throws IOException {
 
         // Default
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").execute()) {
             final String content = curlResponse.getContentAsString();
@@ -434,7 +434,7 @@ public class DataFormatPluginTest {
         }
 
         // 50%
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").param("limit", "50%").execute()) {
             final String content = curlResponse.getContentAsString();
@@ -443,7 +443,7 @@ public class DataFormatPluginTest {
         }
 
         //0%
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/item0/_data")
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "csv").param("limit", "0").execute()) {
             assertEquals(500, curlResponse.getHttpStatusCode());
@@ -452,7 +452,7 @@ public class DataFormatPluginTest {
 
     private static void indexing() {
         final String index0 = "dataset0";
-        final String type0 = "item0";
+        final String type0 = "_doc";
 
         // create an index
         runner.createIndex(index0, (Settings) null);
