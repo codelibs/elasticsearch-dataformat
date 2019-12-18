@@ -28,13 +28,10 @@ public class JsonContent extends DataContent {
 
     private final String bulkIndex;
 
-    private final String bulkType;
-
     public JsonContent(final Client client, final RestRequest request, final ContentType contentType) {
         super(client, request, contentType);
 
         bulkIndex = request.param("bulk.index");
-        bulkType = request.param("bulk.type");
     }
 
     @Override
@@ -86,10 +83,7 @@ public class JsonContent extends DataContent {
                 for (final SearchHit hit : hits) {
                     final String index = bulkIndex == null ? hit.getIndex()
                             : bulkIndex;
-                    final String type = bulkType == null ? hit.getType()
-                            : bulkType;
-                    final String operation = "{\"index\":{\"_index\":\""
-                            + index + "\",\"_type\":\"" + type
+                    final String operation = "{\"index\":{\"_index\":\"" + index
                             + "\",\"_id\":\"" + hit.getId() + "\"}}";
                     final String source = XContentHelper.convertToJson(
                             hit.getSourceRef(), true, false, XContentType.JSON);
