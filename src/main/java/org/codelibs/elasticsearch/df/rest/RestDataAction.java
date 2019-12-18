@@ -88,7 +88,6 @@ public class RestDataAction extends BaseRestHandler {
         final DataContent dataContent = contentType.dataContent(client,
                 request);
 
-        searchRequest.scroll(request.param("scroll", "1m"));
         return channel -> client.search(searchRequest, new SearchResponseListener(
                 channel, file, limitBytes, dataContent));
     }
