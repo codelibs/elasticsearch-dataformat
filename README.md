@@ -8,22 +8,15 @@ The supported formats are CSV, Excel and JSON(Bulk).
 
 ## Version
 
-[Versions in Maven Repository](http://central.maven.org/maven2/org/codelibs/elasticsearch-dataformat/)
+[Versions in Maven Repository](https://repo1.maven.org/maven2/org/codelibs/elasticsearch-dataformat/)
 
 ### Issues/Questions
 
 Please file an [issue](https://github.com/codelibs/elasticsearch-dataformat/issues "issue").
-(Japanese forum is [here](https://github.com/codelibs/codelibs-ja-forum "here").)
 
 ## Installation
 
-### For 5.x
-
-    $ $ES_HOME/bin/elasticsearch-plugin install org.codelibs:elasticsearch-dataformat:5.3.0
-
-### For 2.x
-
-    $ $ES_HOME/bin/plugin install org.codelibs/elasticsearch-dataformat/2.4.0
+    $ $ES_HOME/bin/elasticsearch-plugin install org.codelibs:elasticsearch-dataformat:7.6.0
 
 ## Supported Output Formats
 
