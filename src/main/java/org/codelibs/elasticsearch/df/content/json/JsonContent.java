@@ -75,9 +75,8 @@ public class JsonContent extends DataContent {
             final int size = hits.getHits().length;
             currentCount += size;
             if (logger.isDebugEnabled()) {
-                logger.debug("scrollId: " + scrollId + ", totalHits: "
-                        + hits.getTotalHits() + ", hits: " + size + ", current: "
-                        + currentCount);
+                logger.debug("scrollId: {}, totalHits: {}, hits: {}, current: {}",
+                        scrollId, hits.getTotalHits(), size, currentCount);
             }
             try {
                 for (final SearchHit hit : hits) {

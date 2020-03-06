@@ -79,8 +79,8 @@ public class XlsContent extends DataContent {
         this.isExcel2007 = isExcel2007;
 
         if (logger.isDebugEnabled()) {
-            logger.debug("appendHeader: " + appendHeader + ", headerSet: "
-                    + headerSet + ", isExcel2007: " + isExcel2007);
+            logger.debug("appendHeader: {}, headerSet: {}, isExcel2007: {}",
+                    appendHeader, headerSet, isExcel2007);
         }
     }
 
@@ -150,9 +150,8 @@ public class XlsContent extends DataContent {
 
                 final int size = hits.getHits().length;
                 if (logger.isDebugEnabled()) {
-                    logger.debug("scrollId: " + scrollId + ", totalHits: "
-                            + hits.getTotalHits() + ", hits: " + size
-                            + ", current: " + (currentRowNumber + size));
+                    logger.debug("scrollId: {}, totalHits: {}, hits: {}, current: {}",
+                            scrollId, hits.getTotalHits(), size, (currentRowNumber + size));
                 }
                 for (final SearchHit hit : hits) {
                     final Map<String, Object> sourceMap = hit.getSourceAsMap();
