@@ -1,5 +1,7 @@
 package org.codelibs.elasticsearch.df.rest;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestStatus.OK;
@@ -8,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -41,15 +44,19 @@ public class RestDataAction extends BaseRestHandler {
 
     public RestDataAction(final Settings settings,
                           final RestController restController) {
-        restController.registerHandler(GET, "/_data", this);
-        restController.registerHandler(POST, "/_data", this);
-        restController.registerHandler(GET, "/{index}/_data", this);
-        restController.registerHandler(POST, "/{index}/_data", this);
-
         this.maxMemory = Runtime.getRuntime().maxMemory();
         this.defaultLimit = (long) (maxMemory
                 * (DEFAULT_LIMIT_PERCENTAGE / 100F));
         logger.info("Default limit: {}", defaultLimit);
+    }
+
+    @Override
+    public List<Route> routes() {
+        return unmodifiableList(asList(
+                new Route(GET, "/_data"),
+                new Route(POST, "/_data"),
+                new Route(GET, "/{index}/_data"),
+                new Route(POST, "/{index}/_data")));
     }
 
     public RestChannelConsumer prepareRequest(final RestRequest request,
