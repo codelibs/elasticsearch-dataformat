@@ -129,6 +129,9 @@ public class RestDataAction extends BaseRestHandler {
                 || "application/json".equals(contentType)
                 || "json".equalsIgnoreCase(contentType)) {
             return ContentType.JSON;
+        } else if ("application/list+json".equals(contentType)
+                || "jsonlist".equals(contentType)) {
+            return ContentType.JSONLIST;
         }
 
         return null;

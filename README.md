@@ -4,7 +4,7 @@ Elasticsearch Data Format Plugin
 ## Overview
 
 Elasticsearch Data Format Plugin provides a feature to allow you to download a response of a search result as several formats other than JSON.
-The supported formats are CSV, Excel and JSON(Bulk).
+The supported formats are CSV, Excel, JSON(Bulk) and JSON(Object List).
 
 ## Version
 
@@ -66,4 +66,12 @@ If not, it's as scan query(all data are stored.).
 | source            | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
 | bulk.index        | string  | Index name in Bulk file |
 | bulk.type         | string  | Type name in Bulk file |
+
+### JSON (Object List format)
+
+    $ curl -o /tmp/data.json -XGET "localhost:9200/{index}/{type}/_data?format=jsonlist&source=..."
+
+| Request Parameter |  Type  | Description                                                  |
+| :---------------- | :----: | :----------------------------------------------------------- |
+| source            | string | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
 
