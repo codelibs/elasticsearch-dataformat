@@ -52,11 +52,13 @@ public class DataFormatPluginTest {
     private static final File csvTempFile;
     private static final File xlsTempFile;
     private static final File jsonTempFile;
+    private static final File jsonListTempFile;
     private static final String path;
 
     private final Map<String, String> paramsCsv = new HashMap<>();
     private final Map<String, String> paramsXls = new HashMap<>();
     private final Map<String, String> paramsJson = new HashMap<>();
+    private final Map<String, String> paramsJsonList = new HashMap<>();
 
     static {
         docNumber = 20;
@@ -64,6 +66,7 @@ public class DataFormatPluginTest {
         csvTempFile = createTempFile("csvtest", ".csv");
         xlsTempFile = createTempFile("xlstest", ".xls");
         jsonTempFile = createTempFile("jsontest", ".json");
+        jsonListTempFile = createTempFile("jsonlisttest", ".json");
         path = "/dataset0/_data";
     }
 
@@ -106,6 +109,7 @@ public class DataFormatPluginTest {
         paramsCsv.put("format", "csv");
         paramsXls.put("format", "xls");
         paramsJson.put("format", "json");
+        paramsJsonList.put("format", "jsonlist");
     }
 
     @After
@@ -113,6 +117,7 @@ public class DataFormatPluginTest {
         paramsCsv.clear();
         paramsXls.clear();
         paramsJson.clear();
+        paramsJsonList.clear();
     }
 
     @Test
@@ -418,6 +423,106 @@ public class DataFormatPluginTest {
             assertTrue(lines.get(0).startsWith(
                     "{\"index\":{\"_index\":\"dataset0\","));
             assertTrue(lines.get(1).startsWith("{\"aaa\""));
+        }
+    }
+
+    @Test
+    public void dumpJsonList() throws IOException {
+
+        // Download All as JSON
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
+                .header("Content-Type", "application/json")
+                .param("format", "jsonlist").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(docNumber + 2, lines.length);
+            assertTrue(lines[0].equals("["));
+            assertTrue(lines[1].startsWith("{" + "\"aaa\":\"test"));
+            assertTrue(lines[docNumber + 1].equals("]"));
+        }
+
+        final String query = "{\"query\":{\"bool\":{\"must\":[{\"range\":{\"bbb\":{\"from\":\"1\",\"to\":\"10\"}}}],\"must_not\":[],\"should\":[]}},\"sort\":[\"bbb\"]}";
+
+        // Download 10 docs as JSON with Query
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
+                .header("Content-Type", "application/json")
+                .param("format", "jsonlist")
+                .param("search_type", "query_then_fetch").body(query)
+                .execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(10 + 2, lines.length);
+            assertTrue(lines[0].startsWith("["));
+            assertTrue(lines[1].startsWith("{" + "\"aaa\":\"test"));
+        }
+
+        // Download 10 docs as JSON
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
+                .header("Content-Type", "application/json").param("q", "*:*")
+                .param("format", "jsonlist").param("from", "5").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(15 + 2, lines.length);
+        }
+
+        // Download all the docs from the 5th as JSON
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
+                .header("Content-Type", "application/json").param("q", "*:*")
+                .param("format", "jsonlist").param("from", "5")
+                .param("size", String.valueOf(docNumber)).execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals((docNumber - 5) + 2, lines.length);
+        }
+
+        final String queryWithFrom = "{\"query\":{\"match_all\":{}},\"from\":5,\"size\":" + String.valueOf(docNumber) + ",\"sort\":[\"bbb\"]}";
+
+        // Download All as JSON with Query and from
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
+                .header("Content-Type", "application/json")
+                .param("format", "jsonlist").body(queryWithFrom).execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals((docNumber - 5) + 2, lines.length);
+        }
+
+        // Download All as JSON with Query and from
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
+                .header("Content-Type", "application/json")
+                .param("format", "jsonlist").param("source", queryWithFrom)
+                .param("source_content_type", "application/json")
+                .execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals((docNumber - 5) + 2, lines.length);
+        }
+
+        // Download All as JSON with search_type
+        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
+                .header("Content-Type", "application/json")
+                .param("search_type", "query_then_fetch")
+                .param("format", "jsonlist").execute()) {
+            final String content = curlResponse.getContentAsString();
+            final String[] lines = content.split("\n");
+            assertEquals(docNumber + 2, lines.length);
+            assertTrue(lines[0].equals("["));
+            assertTrue(lines[1].startsWith("{" + "\"aaa\":\"test"));
+            assertTrue(lines[docNumber + 1].equals("]"));            
+        }
+    }
+
+    @Test
+    public void dumpJsonListInFile() throws IOException {
+        paramsJsonList.put("file", jsonListTempFile.getAbsolutePath());
+
+        try (CurlResponse curlResponse = createRequest(node, path, paramsJsonList).execute()) {
+            assertAcknowledged(curlResponse, jsonListTempFile);
+            final List<String> lines = Files.readAllLines(jsonListTempFile.toPath(), Charsets.UTF_8);
+            assertEquals(docNumber + 2, lines.size());
+            assertTrue(lines.get(0).equals("["));
+            assertTrue(lines.get(1).startsWith("{" + "\"aaa\":\"test"));
+            assertTrue(lines.get(docNumber).startsWith("{" + "\"aaa\":\"test"));
+            assertTrue(lines.get(docNumber + 1).equals("]"));   
         }
     }
 

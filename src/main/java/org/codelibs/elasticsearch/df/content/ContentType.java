@@ -2,6 +2,7 @@ package org.codelibs.elasticsearch.df.content;
 
 import org.codelibs.elasticsearch.df.content.csv.CsvContent;
 import org.codelibs.elasticsearch.df.content.json.JsonContent;
+import org.codelibs.elasticsearch.df.content.json.JsonListContent;
 import org.codelibs.elasticsearch.df.content.xls.XlsContent;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.rest.RestRequest;
@@ -94,6 +95,27 @@ public enum ContentType {
                 return "_all.xlsx";
             }
             return index + ".xlsx";
+        }
+    },
+    JSONLIST(50) {
+        @Override
+        public String contentType() {
+            return "application/json";
+        }
+
+        @Override
+        public DataContent dataContent(final Client client,
+                final RestRequest request) {
+            return new JsonListContent(client, request, this);
+        }
+
+        @Override
+        public String fileName(final RestRequest request) {
+            final String index = request.param("index");
+            if (index == null) {
+                return "_all.json";
+            }
+            return index + ".json";
         }
     };
 
