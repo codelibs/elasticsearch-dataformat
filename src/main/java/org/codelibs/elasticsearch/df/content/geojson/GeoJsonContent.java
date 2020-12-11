@@ -6,6 +6,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -118,7 +120,9 @@ public class GeoJsonContent extends DataContent {
 
         @Override
         public void onResponse(final SearchResponse response) {
-            final Gson gsonWriter = new GsonBuilder().create();
+            final Gson gsonWriter = AccessController.doPrivileged((PrivilegedAction<Gson>) () -> {
+                return new GsonBuilder().create();
+            });
             final String scrollId = response.getScrollId();
             final SearchHits hits = response.getHits();
             final int size = hits.getHits().length;
@@ -137,12 +141,14 @@ public class GeoJsonContent extends DataContent {
                         firstLine = false;
                     }
 
-                    final JsonElement propertiesJson = JsonParser.parseString(source);
+                    final JsonElement propertiesJson = AccessController.doPrivileged((PrivilegedAction<JsonElement>) () -> {
+                        return JsonParser.parseString(source);
+                    });
                     String geometryType = "";
 
                     JsonArray geometryCoordinates = new JsonArray();
                     if (!geometryCoordinatesField.isEmpty()){
-                        JsonElement jsonEltCoord = JsonUtils.getJsonElement(propertiesJson,geometryCoordinatesField);
+                        final JsonElement jsonEltCoord = JsonUtils.getJsonElement(propertiesJson,geometryCoordinatesField);
                         if (jsonEltCoord !=null && !jsonEltCoord.isJsonNull()){
                             geometryCoordinates = jsonEltCoord.getAsJsonArray​();
                             if (!geometryKeepGeoInfo){
@@ -150,7 +156,7 @@ public class GeoJsonContent extends DataContent {
                             }
                         }
                         if (!geometryTypeField.isEmpty()){
-                            JsonElement jsonEltType = JsonUtils.getJsonElement(propertiesJson,geometryTypeField);
+                            final JsonElement jsonEltType = JsonUtils.getJsonElement(propertiesJson,geometryTypeField);
                             if (jsonEltType !=null && !jsonEltType.isJsonNull()){
                                 geometryType = jsonEltType.getAsString();
                                 if (!geometryKeepGeoInfo){
@@ -160,8 +166,8 @@ public class GeoJsonContent extends DataContent {
                         }
                     }else{
                         if (!geometryCoordinatesLonField.isEmpty() && !geometryCoordinatesLatField.isEmpty()){
-                            JsonElement jsonEltLon = JsonUtils.getJsonElement(propertiesJson,geometryCoordinatesLonField);
-                            JsonElement jsonEltLat = JsonUtils.getJsonElement(propertiesJson,geometryCoordinatesLatField);
+                            final JsonElement jsonEltLon = JsonUtils.getJsonElement(propertiesJson,geometryCoordinatesLonField);
+                            final JsonElement jsonEltLat = JsonUtils.getJsonElement(propertiesJson,geometryCoordinatesLatField);
                             if (jsonEltLon !=null && !jsonEltLon.isJsonNull() && jsonEltLat !=null && !jsonEltLat.isJsonNull()){
                                 geometryCoordinates.add(jsonEltLon.getAsNumber());
                                 geometryCoordinates.add(jsonEltLat.getAsNumber());
@@ -172,7 +178,7 @@ public class GeoJsonContent extends DataContent {
                             }
                         }
                         if (!geometryCoordinatesAltField.isEmpty()){
-                            JsonElement jsonElt = JsonUtils.getJsonElement(propertiesJson,geometryCoordinatesAltField);
+                            final JsonElement jsonElt = JsonUtils.getJsonElement(propertiesJson,geometryCoordinatesAltField);
                             if (jsonElt !=null && !jsonElt.isJsonNull()){
                                 geometryCoordinates.add(jsonElt.getAsNumber());
                                 if (!geometryKeepGeoInfo) {
@@ -186,7 +192,7 @@ public class GeoJsonContent extends DataContent {
                     for (String excludeField : excludeFields) {
                         JsonUtils.removeJsonElement(propertiesJson,excludeField);
                     }
-                    
+
                     JsonObject geometryObject = new JsonObject();
                     geometryObject.addProperty("type", geometryType);
                     geometryObject.add("coordinates", geometryCoordinates);
