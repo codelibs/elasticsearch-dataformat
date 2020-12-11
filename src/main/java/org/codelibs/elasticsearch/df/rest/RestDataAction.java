@@ -64,7 +64,7 @@ public class RestDataAction extends BaseRestHandler {
         SearchRequest searchRequest = new SearchRequest();
         request.withContentOrSourceParamParserOrNull(
                 parser -> RestSearchAction.parseSearchRequest(searchRequest,
-                        request, parser,
+                        request, parser,client.getNamedWriteableRegistry(),
                         size -> searchRequest.source().size(size)));
 
         if (request.paramAsInt("size", -1) == -1) {
