@@ -590,7 +590,6 @@ public class DataFormatPluginTest {
                 .execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
-            System.out.println(content);
             assertTrue(!lines[1].contains("\"x_lon\":"));
             assertTrue(!lines[1].contains("\"x_lat\":"));
             assertTrue(!lines[1].contains("\"iii\":{\"jjj\":\"static test\"}"));
