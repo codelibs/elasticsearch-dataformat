@@ -4,7 +4,7 @@ Elasticsearch Data Format Plugin
 ## Overview
 
 Elasticsearch Data Format Plugin provides a feature to allow you to download a response of a search result as several formats other than JSON.
-The supported formats are CSV, Excel, JSON(Bulk) and JSON(Object List).
+The supported formats are CSV, Excel, JSON(Bulk), JSON(Object List) and GeoJSON.
 
 ## Version
 
@@ -75,3 +75,19 @@ If not, it's as scan query(all data are stored.).
 | :---------------- | :----: | :----------------------------------------------------------- |
 | source            | string | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
 
+### GeoJSON (Open GIS standard)
+
+    $ curl -o /tmp/data.json -XGET "localhost:9200/{index}/{type}/_data?format=geojson&source=..."
+
+| Request Parameter        |  Type   | Description                                                  |
+| :----------------------- | :----:  | :----------------------------------------------------------- |
+| source                   | string  | [Query DSL](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html) |
+| geometry.lon_field       | string  | Longitude field for coordinates (Support Geometry type "Point") |
+| geometry.lat_field       | string  | Latitude field for coordinates (Support Geometry type "Point") |
+| geometry.alt_field       | string  | Altitude field for coordinates (Support Geometry type "Point") |
+| geometry.coord_field     | string  | Coordinates field. Support all Geometry types (see [GeoJSON Example](https://en.wikipedia.org/wiki/GeoJSON)).<br/>If set, overwrite `geometry.lon_field`, `geometry.lat_field` and `geometry.alt_field` |
+| geometry.type_field      | string  | Geometry type field (see [GeoJSON Example](https://en.wikipedia.org/wiki/GeoJSON))<br/>Only used if `geometry.coord_field` param is set |
+| keep_geometry_info       | boolean | Keep or not the original geometry fields in final GeoJSON properties (default: false) |
+| exclude_fields           | string  | Exclude fields in final geojson properties (comma separate format) |
+
+**NB**: Field name can use basic style like `a` or JSONpath style like `a.b.c[2].d`

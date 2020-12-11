@@ -1,6 +1,7 @@
 package org.codelibs.elasticsearch.df.content;
 
 import org.codelibs.elasticsearch.df.content.csv.CsvContent;
+import org.codelibs.elasticsearch.df.content.geojson.GeoJsonContent;
 import org.codelibs.elasticsearch.df.content.json.JsonContent;
 import org.codelibs.elasticsearch.df.content.json.JsonListContent;
 import org.codelibs.elasticsearch.df.content.xls.XlsContent;
@@ -116,6 +117,27 @@ public enum ContentType {
                 return "_all.json";
             }
             return index + ".json";
+        }
+    },
+    GEOJSON(60) {
+        @Override
+        public String contentType() {
+            return "application/geo+json";
+        }
+
+        @Override
+        public DataContent dataContent(final Client client,
+                final RestRequest request) {
+            return new GeoJsonContent(client, request, this);
+        }
+
+        @Override
+        public String fileName(final RestRequest request) {
+            final String index = request.param("index");
+            if (index == null) {
+                return "_all.geojson";
+            }
+            return index + ".geojson";
         }
     };
 
