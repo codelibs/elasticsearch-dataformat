@@ -65,6 +65,8 @@ public class DataFormatPluginTest {
     private final Map<String, String> paramsGeoJson = new HashMap<>();
 
     static {
+        // Doc number used for test
+        // -> max 9990 because elastic query size limited below 10000
         docNumber = 20;
 
         csvTempFile = createTempFile("csvtest", ".csv");
@@ -168,14 +170,15 @@ public class DataFormatPluginTest {
             assertLineContains(lines[0], "\"aaa\"", "\"bbb\"", "\"ccc\"", "\"eee.fff\"", "\"eee.ggg\"");
             assertLineContains(lines[1], "\"1\"");
         }
-
+        
         // Download 10 docs as CSV
         clearParams();
         prepareParams();
         paramsCsv.put("q", "*:*");
         paramsCsv.put("from", "5");
-        try (CurlResponse response = createRequest(node, path, paramsCsv).execute()) {
-            assertEquals(16, response.getContentAsString().split("\n").length);
+        try (CurlResponse response = createRequest(node, path, paramsCsv)
+                .param("size", Integer.toString(docNumber)).execute()) {
+            assertEquals(docNumber - 4, response.getContentAsString().split("\n").length);
         }
 
         // Download all the docs from the 5th as CSV
@@ -193,7 +196,9 @@ public class DataFormatPluginTest {
         // Download All as CSV with Query and from
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
-                .param("format", "csv").body(queryWithFrom).execute()) {
+                .param("format", "csv")
+                .param("size", Integer.toString(docNumber))
+                .body(queryWithFrom).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber - 10 + 1, lines.length);
@@ -204,6 +209,7 @@ public class DataFormatPluginTest {
                 .header("Content-Type", "application/json")
                 .param("format", "csv").param("source", queryWithFrom)
                 .param("source_content_type", "application/json")
+                .param("size", String.valueOf(docNumber))
                 .execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
@@ -214,6 +220,7 @@ public class DataFormatPluginTest {
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("search_type", "query_then_fetch").param("format", "csv")
+                .param("size", String.valueOf(docNumber))
                 .execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
@@ -299,7 +306,9 @@ public class DataFormatPluginTest {
         // Download All as Excel with search_type
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
-                .param("search_type", "query_then_fetch").param("format", "xls")
+                .param("search_type", "query_then_fetch")
+                .param("format", "xls")
+                .param("size", Integer.toString(docNumber))
                 .execute()) {
             try (InputStream is = curlResponse.getContentAsStream()) {
                 final POIFSFileSystem fs = new POIFSFileSystem(is);
@@ -331,7 +340,8 @@ public class DataFormatPluginTest {
         // Download All as JSON
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
-                .param("format", "json").execute()) {
+                .param("format", "json")
+                .param("size", Integer.toString(docNumber)).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber * 2, lines.length);
@@ -343,6 +353,7 @@ public class DataFormatPluginTest {
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("format", "json").param("bulk.index", "dataset02")
+                .param("size", Integer.toString(docNumber))
                 .execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
@@ -366,15 +377,6 @@ public class DataFormatPluginTest {
             assertTrue(lines[1].startsWith("{\"aaa\":\"test 1\","));
         }
 
-        // Download 10 docs as JSON
-        try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
-                .header("Content-Type", "application/json").param("q", "*:*")
-                .param("format", "json").param("from", "5").execute()) {
-            final String content = curlResponse.getContentAsString();
-            final String[] lines = content.split("\n");
-            assertEquals(30, lines.length);
-        }
-
         // Download all the docs from the 5th as JSON
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json").param("q", "*:*")
@@ -390,7 +392,9 @@ public class DataFormatPluginTest {
         // Download All as JSON with Query and from
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
-                .param("format", "json").body(queryWithFrom).execute()) {
+                .param("format", "json")
+                .param("size", String.valueOf(docNumber))
+                .body(queryWithFrom).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals((docNumber - 5) * 2, lines.length);
@@ -401,6 +405,7 @@ public class DataFormatPluginTest {
                 .header("Content-Type", "application/json")
                 .param("format", "json").param("source", queryWithFrom)
                 .param("source_content_type", "application/json")
+                .param("size", String.valueOf(docNumber))
                 .execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
@@ -411,7 +416,8 @@ public class DataFormatPluginTest {
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("search_type", "query_then_fetch")
-                .param("format", "json").execute()) {
+                .param("format", "json")
+                .param("size", String.valueOf(docNumber)).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber * 2, lines.length);
@@ -440,7 +446,7 @@ public class DataFormatPluginTest {
         // Download All as JSON
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
-                .param("format", "jsonlist").execute()) {
+                .param("format", "jsonlist").param("size", Integer.toString(docNumber)).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber + 2, lines.length);
@@ -467,10 +473,11 @@ public class DataFormatPluginTest {
         // Download 10 docs as JSON
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json").param("q", "*:*")
-                .param("format", "jsonlist").param("from", "5").execute()) {
+                .param("format", "jsonlist").param("from", "5")
+                .param("size", Integer.toString(docNumber)).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
-            assertEquals(15 + 2, lines.length);
+            assertEquals(docNumber - 5 + 2, lines.length);
         }
 
         // Download all the docs from the 5th as JSON
@@ -488,7 +495,9 @@ public class DataFormatPluginTest {
         // Download All as JSON with Query and from
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
-                .param("format", "jsonlist").body(queryWithFrom).execute()) {
+                .param("format", "jsonlist")
+                .param("size", String.valueOf(docNumber))
+                .body(queryWithFrom).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals((docNumber - 5) + 2, lines.length);
@@ -499,7 +508,7 @@ public class DataFormatPluginTest {
                 .header("Content-Type", "application/json")
                 .param("format", "jsonlist").param("source", queryWithFrom)
                 .param("source_content_type", "application/json")
-                .execute()) {
+                .param("size", String.valueOf(docNumber)).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals((docNumber - 5) + 2, lines.length);
@@ -509,7 +518,8 @@ public class DataFormatPluginTest {
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
                 .param("search_type", "query_then_fetch")
-                .param("format", "jsonlist").execute()) {
+                .param("format", "jsonlist")
+                .param("size", String.valueOf(docNumber)).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber + 2, lines.length);
@@ -540,7 +550,7 @@ public class DataFormatPluginTest {
         // default call
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset1/_data")
                 .header("Content-Type", "application/json")
-                .param("format", "geojson").execute()) {
+                .param("format", "geojson").param("size", Integer.toString(docNumber)).execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber + 2, lines.length);
@@ -658,7 +668,9 @@ public class DataFormatPluginTest {
         // Default
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
-                .param("format", "csv").execute()) {
+                .param("format", "csv")
+                .param("size", Integer.toString(docNumber))
+                .execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber + 1, lines.length);
@@ -667,7 +679,10 @@ public class DataFormatPluginTest {
         // 50%
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
-                .param("format", "csv").param("limit", "50%").execute()) {
+                .param("format", "csv")
+                .param("size", Integer.toString(docNumber))
+                .param("limit", "50%")
+                .execute()) {
             final String content = curlResponse.getContentAsString();
             final String[] lines = content.split("\n");
             assertEquals(docNumber + 1, lines.length);
@@ -676,7 +691,10 @@ public class DataFormatPluginTest {
         //0%
         try (CurlResponse curlResponse = EcrCurl.get(node, "/dataset0/_data")
                 .header("Content-Type", "application/json")
-                .param("format", "csv").param("limit", "0").execute()) {
+                .param("format", "csv")
+                .param("size", Integer.toString(docNumber))
+                .param("limit", "0")
+                .execute()) {
             assertEquals(500, curlResponse.getHttpStatusCode());
         }
     }
@@ -762,7 +780,7 @@ public class DataFormatPluginTest {
     }
 
     private CurlRequest createRequest(Node node, String path, Map<String, String> params) {
-        CurlRequest request = EcrCurl.get(node, path).header("Content-Type", "application/json");
+        CurlRequest request = EcrCurl.get(node, path).header("Content-Type", "application/json").param("size", Integer.toString(docNumber));
         for (final Map.Entry<String, String> entry : params.entrySet()) {
             request.param(entry.getKey(), entry.getValue());
         }
