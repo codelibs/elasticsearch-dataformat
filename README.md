@@ -21,8 +21,9 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-dataformat/issu
 ## Supported Output Formats
 
 This plugin allows you to download data as a format you want.
-If the query dsl contains "from" parameter, the query is processed as search query.
-If not, it's as scan query(all data are stored.).
+By default, the 100 first hits are returned.
+You can customize hits returned with `from` and `size` query parameters.
+If you want to download all data, use `scroll=1m` query parameter.
 
 ### CSV
 
