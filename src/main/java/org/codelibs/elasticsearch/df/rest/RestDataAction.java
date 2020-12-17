@@ -132,10 +132,6 @@ public class RestDataAction extends BaseRestHandler {
         } else if ("application/list+json".equals(contentType)
                 || "jsonlist".equals(contentType)) {
             return ContentType.JSONLIST;
-        } else if ("application/geo+json".equals(contentType)
-                || "application/geojson".equals(contentType)
-                || "geojson".equals(contentType)) {
-            return ContentType.GEOJSON;
         }
 
         return null;
