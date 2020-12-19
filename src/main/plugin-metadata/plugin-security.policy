@@ -1,3 +1,4 @@
 grant {
   permission java.lang.RuntimePermission "getClassLoader";
+  permission java.lang.RuntimePermission "accessDeclaredMembers";
 };
